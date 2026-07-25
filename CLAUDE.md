@@ -42,21 +42,32 @@ The current period's recorded spends: date is editable inline (the only place
 a spend's date can be changed), delete asks for confirmation.
 
 ### Summary (report view)
-Choose a period (default: current). Shows the category breakdown (amount,
-share of total, and — if the category has a budget — over/under and by how
-much). The bar is always full width and two-toned when a category has a
-budget: under budget it's spend (blue) + headroom (green); over budget it's
-budget (blue) + the overspend (red) — so blue always represents "budget" and
-shrinks proportionally once you go over it. No-budget categories keep a
-single-color bar sized relative to the biggest category that period.
+Choose a period (default: current). One `<li>` per category (union of both
+periods' categories, sorted by main-period spend), each holding its own
+period rows stacked vertically — main period first, then the compare period
+directly underneath, both with the identical amount/share/budget-bar
+treatment (see below) — plus a change line under the pair. There's no
+separate comparison list anymore; that was the whole point of stacking them
+per category instead.
 
-A second picker ("Compare with") sets which period the per-category
-comparison list is against — defaults to whatever's immediately before the
-main period chronologically, same as before, but the user can pick any other
-period instead. Its list excludes the main period (comparing a period to
-itself isn't useful) and only resets to the default when the current choice
-becomes invalid (main period changed to match it, or it no longer exists) —
-switching the main period otherwise keeps an explicit comparison choice.
+Each period row shows amount, share of that period's total, and a bar that's
+always full width and two-toned when the category has a budget: under
+budget it's spend (blue) + headroom (green); over budget it's budget (blue)
++ the overspend (red) — so blue always represents "budget" and shrinks
+proportionally once you go over it. No-budget categories keep a single-color
+bar sized relative to the biggest category *in that period* (main and
+compare periods are scaled independently, since their totals can differ a
+lot). A category with spend in only one of the two periods still gets both
+rows — the other just shows £0.00 (with a full green bar if it has a budget).
+
+A second picker ("Compare with") sets which period that second row is —
+defaults to whatever's immediately before the main period chronologically,
+same as before, but the user can pick any other period instead. Its list
+excludes the main period (comparing a period to itself isn't useful) and
+only resets to the default when the current choice becomes invalid (main
+period changed to match it, or it no longer exists) — switching the main
+period otherwise keeps an explicit comparison choice.
+
 Period management lives here too, next
 to the picker: rename (pencil icon), delete (bin icon, confirmed), and start
 new (button below, prompts for a name prefilled with today's date). Deleting

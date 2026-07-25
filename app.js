@@ -1,4 +1,4 @@
-const APP_VERSION = 'v1.10';
+const APP_VERSION = 'v1.11';
 
 // ── Storage ───────────────────────────────────────────────────────────────────
 
@@ -434,7 +434,6 @@ const renameMonthBtn = document.getElementById('renameMonthBtn');
 const deleteMonthBtn = document.getElementById('deleteMonthBtn');
 const reportTotal = document.getElementById('reportTotal');
 const categoryBreakdown = document.getElementById('categoryBreakdown');
-const comparisonList = document.getElementById('comparisonList');
 
 const categoryList = document.getElementById('categoryList');
 const addCategoryBtn = document.getElementById('addCategoryBtn');
@@ -776,6 +775,37 @@ function renderCompareMonthSelect() {
   }
 }
 
+// Builds one period's row within a category block: label, amount + share of
+// that period's total, and the budget bar (see renderReport for the bar's
+// blue/green/red rules). `max` is the biggest single-category spend in that
+// period, used to scale the bar when the category has no budget set.
+function buildPeriodRowHtml(label, amount, periodTotal, budget, max) {
+  const pct = periodTotal ? Math.round((amount / periodTotal) * 100) : 0;
+  const overBudget = budget > 0 && amount > budget;
+
+  let barHtml, budgetHtml = '';
+  if (budget > 0) {
+    const remaining = budget - amount;
+    budgetHtml = `<div class="breakdown-budget ${overBudget ? 'over-budget' : 'under-budget'}">${overBudget ? `Over by ${money(-remaining)}` : `${money(remaining)} left`} of ${money(budget)} budget</div>`;
+    const bluePct = overBudget ? (budget / amount) * 100 : (amount / budget) * 100;
+    const secondClass = overBudget ? 'red' : 'green';
+    barHtml = `<div class="bar-segment blue" style="width:${bluePct}%"></div><div class="bar-segment ${secondClass}" style="width:${100 - bluePct}%"></div>`;
+  } else {
+    barHtml = `<div class="bar-segment neutral" style="width:${max ? (amount / max) * 100 : 0}%"></div>`;
+  }
+
+  return `
+    <div class="breakdown-period">
+      <div class="breakdown-row">
+        <span class="breakdown-period-label">${escapeHtml(label)}</span>
+        <span class="breakdown-amount">${money(amount)} · ${pct}%</span>
+      </div>
+      <div class="bar-track">${barHtml}</div>
+      ${budgetHtml}
+    </div>
+  `;
+}
+
 function renderReport() {
   renderMonthSelect();
   renderCompareMonthSelect();
@@ -786,79 +816,46 @@ function renderReport() {
   reportTotal.textContent = money(total);
 
   const totals = categoryTotals(month);
-  const rows = [...totals.entries()]
-    .map(([id, amount]) => ({ id, name: findCategory(id)?.name || 'Unknown', amount }))
-    .sort((a, b) => b.amount - a.amount);
+  const compareTotals = compareMonth ? categoryTotals(compareMonth) : new Map();
+  const compareTotal = compareMonth ? monthTotal(compareMonth) : 0;
+
+  const ids = new Set([...totals.keys(), ...compareTotals.keys()]);
+  const rows = [...ids]
+    .map(id => ({
+      id,
+      name: findCategory(id)?.name || 'Unknown',
+      amount: totals.get(id) || 0,
+      compareAmount: compareTotals.get(id) || 0,
+    }))
+    .sort((a, b) => b.amount - a.amount || b.compareAmount - a.compareAmount);
 
   categoryBreakdown.innerHTML = '';
   if (!rows.length) {
     categoryBreakdown.innerHTML = '<li class="empty-msg">No spends recorded for this period.</li>';
-  } else {
-    const max = Math.max(...rows.map(r => r.amount));
-    for (const r of rows) {
-      const pct = total ? Math.round((r.amount / total) * 100) : 0;
-      const budget = findCategory(r.id)?.budget || 0;
-      const overBudget = budget > 0 && r.amount > budget;
-
-      let barHtml, budgetHtml = '';
-      if (budget > 0) {
-        const remaining = budget - r.amount;
-        budgetHtml = `<div class="breakdown-budget ${overBudget ? 'over-budget' : 'under-budget'}">${overBudget ? `Over by ${money(-remaining)}` : `${money(remaining)} left`} of ${money(budget)} budget</div>`;
-
-        // Bar always fills 100%: under budget it's spend (blue) + headroom (green);
-        // over budget it's budget (blue) + the overspend (red) — so the blue portion
-        // always represents "budget" and shrinks as a share once you go over it.
-        const bluePct = overBudget ? (budget / r.amount) * 100 : (r.amount / budget) * 100;
-        const secondClass = overBudget ? 'red' : 'green';
-        barHtml = `<div class="bar-segment blue" style="width:${bluePct}%"></div><div class="bar-segment ${secondClass}" style="width:${100 - bluePct}%"></div>`;
-      } else {
-        barHtml = `<div class="bar-segment neutral" style="width:${max ? (r.amount / max) * 100 : 0}%"></div>`;
-      }
-
-      const li = document.createElement('li');
-      li.className = 'breakdown-item';
-      li.innerHTML = `
-        <div class="breakdown-row">
-          <span class="breakdown-name">${escapeHtml(r.name)}</span>
-          <span class="breakdown-amount">${money(r.amount)} · ${pct}%</span>
-        </div>
-        <div class="bar-track">${barHtml}</div>
-        ${budgetHtml}
-      `;
-      categoryBreakdown.appendChild(li);
-    }
-  }
-
-  comparisonList.innerHTML = '';
-  if (!compareMonth) {
-    comparisonList.innerHTML = '<li class="empty-msg">No other period to compare.</li>';
     return;
   }
-  const compareTotals = categoryTotals(compareMonth);
-  const ids = new Set([...totals.keys(), ...compareTotals.keys()]);
-  const compareRows = [...ids]
-    .map(id => ({
-      id,
-      name: findCategory(id)?.name || 'Unknown',
-      cur: totals.get(id) || 0,
-      compare: compareTotals.get(id) || 0,
-    }))
-    .sort((a, b) => b.cur - a.cur);
 
-  for (const r of compareRows) {
-    const delta = r.cur - r.compare;
-    const deltaClass = delta > 0 ? 'delta-up' : delta < 0 ? 'delta-down' : 'delta-flat';
-    const sign = delta > 0 ? '+' : '';
+  const max = Math.max(...rows.map(r => r.amount));
+  const compareMax = Math.max(...rows.map(r => r.compareAmount));
+
+  for (const r of rows) {
+    const budget = findCategory(r.id)?.budget || 0;
+
+    let html = `<div class="breakdown-category-name">${escapeHtml(r.name)}</div>`;
+    html += buildPeriodRowHtml(month.label, r.amount, total, budget, max);
+
+    if (compareMonth) {
+      html += buildPeriodRowHtml(compareMonth.label, r.compareAmount, compareTotal, budget, compareMax);
+      const delta = r.amount - r.compareAmount;
+      const deltaClass = delta > 0 ? 'delta-up' : delta < 0 ? 'delta-down' : 'delta-flat';
+      const sign = delta > 0 ? '+' : '';
+      html += `<div class="breakdown-delta ${deltaClass}">${sign}${money(Math.abs(delta))} change</div>`;
+    }
+
     const li = document.createElement('li');
-    li.className = 'comparison-item';
-    li.innerHTML = `
-      <div>
-        <div class="comparison-name">${escapeHtml(r.name)}</div>
-        <div class="comparison-prev">${money(r.compare)} → ${money(r.cur)}</div>
-      </div>
-      <div class="comparison-delta ${deltaClass}">${sign}${money(Math.abs(delta))}</div>
-    `;
-    comparisonList.appendChild(li);
+    li.className = 'breakdown-item';
+    li.innerHTML = html;
+    categoryBreakdown.appendChild(li);
   }
 }
 
