@@ -30,7 +30,10 @@ Bottom nav, four screens (icon + label, like the `rehearsal` app):
 ### Home (spend view)
 Entry-only — category, amount — nothing else, so it's as fast as possible for
 repeated use. Blurs the amount field after adding (closes the numeric
-keypad) rather than refocusing it. The category picker is an expandable list
+keypad) rather than refocusing it, and plays a short Web Audio "ding"
+(`playAddedSound`, same lazy-AudioContext-in-a-user-gesture pattern as the
+`timeit` app) as an audible confirmation. The category picker is an
+expandable list
 (trigger button + chevron that flips, tap a row to pick and it closes), the
 same pattern `rehearsal` uses for "Download from shared library" — not a
 native `<select>`; the period picker in Summary uses the identical pattern.

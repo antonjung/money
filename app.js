@@ -1,4 +1,30 @@
-const APP_VERSION = 'v1.11';
+const APP_VERSION = 'v1.12';
+
+// ── Sound ─────────────────────────────────────────────────────────────────────
+
+let audioCtx = null;
+
+// Short rising "ding" confirming a spend was added. Created lazily inside a
+// user-gesture handler (the form submit) to satisfy autoplay policies.
+function playAddedSound() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1320, audioCtx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+    osc.start(audioCtx.currentTime);
+    osc.stop(audioCtx.currentTime + 0.15);
+  } catch {
+    // Web Audio unavailable/blocked — the sound is a nice-to-have, skip silently.
+  }
+}
 
 // ── Storage ───────────────────────────────────────────────────────────────────
 
@@ -624,6 +650,7 @@ spendForm.addEventListener('submit', e => {
   if (!amount || amount <= 0) { amountInput.focus(); return; }
 
   addSpend(selectedCategoryId, amount);
+  playAddedSound();
 
   amountInput.value = '';
   amountInput.blur();
