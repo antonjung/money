@@ -1,4 +1,4 @@
-const APP_VERSION = 'v1.14';
+const APP_VERSION = 'v1.15';
 
 // ── Sound ─────────────────────────────────────────────────────────────────────
 
@@ -783,31 +783,37 @@ function selectCompareMonth(monthId) {
   renderReport();
 }
 
+const NO_COMPARE = '__none__';
+
 // Defaults the comparison to whatever period immediately precedes the main
 // one chronologically — same as the old automatic behaviour — but only
 // when there's no valid explicit choice already (so switching the main
-// period doesn't clobber a comparison the user picked on purpose).
+// period doesn't clobber a comparison the user picked on purpose, and an
+// explicit "None" stays "None").
 function defaultCompareMonthId(mainMonthId) {
   const idx = data.months.findIndex(m => m.id === mainMonthId);
-  return idx > 0 ? data.months[idx - 1].id : null;
+  return idx > 0 ? data.months[idx - 1].id : NO_COMPARE;
 }
 
 function renderCompareMonthSelect() {
   const sorted = [...data.months].sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt));
   const options = sorted.filter(m => m.id !== selectedMonthId);
-  if (!options.some(m => m.id === selectedCompareMonthId)) {
+  const isValid = selectedCompareMonthId === NO_COMPARE || options.some(m => m.id === selectedCompareMonthId);
+  if (!isValid) {
     selectedCompareMonthId = defaultCompareMonthId(selectedMonthId);
   }
 
   compareMonthDropdown.innerHTML = '';
-  if (!options.length) {
-    compareMonthTriggerLabel.textContent = 'No other periods';
-    return;
-  }
-  compareMonthTriggerLabel.textContent = 'Select period';
+
+  const noneItem = document.createElement('button');
+  noneItem.type = 'button';
+  noneItem.className = 'dropdown-item' + (selectedCompareMonthId === NO_COMPARE ? ' selected' : '');
+  noneItem.textContent = 'None';
+  noneItem.addEventListener('click', () => selectCompareMonth(NO_COMPARE));
+  compareMonthDropdown.appendChild(noneItem);
+
   for (const m of options) {
     const label = m.label + (m.endedAt ? '' : ' (current)');
-    if (m.id === selectedCompareMonthId) compareMonthTriggerLabel.textContent = label;
     const item = document.createElement('button');
     item.type = 'button';
     item.className = 'dropdown-item' + (m.id === selectedCompareMonthId ? ' selected' : '');
@@ -815,14 +821,16 @@ function renderCompareMonthSelect() {
     item.addEventListener('click', () => selectCompareMonth(m.id));
     compareMonthDropdown.appendChild(item);
   }
+
+  const selectedM = options.find(m => m.id === selectedCompareMonthId);
+  compareMonthTriggerLabel.textContent = selectedM ? selectedM.label + (selectedM.endedAt ? '' : ' (current)') : 'None';
 }
 
-// Builds one period's row within a category block: label, amount + share of
-// that period's total, and the budget bar (see renderReport for the bar's
-// blue/green/red rules). `max` is the biggest single-category spend in that
-// period, used to scale the bar when the category has no budget set.
-function buildPeriodRowHtml(label, amount, periodTotal, budget, max) {
-  const pct = periodTotal ? Math.round((amount / periodTotal) * 100) : 0;
+// Builds one period's row within a category block: label, amount, and the
+// budget bar (see renderReport for the bar's blue/green/red rules). `max` is
+// the biggest single-category spend in that period, used to scale the bar
+// when the category has no budget set.
+function buildPeriodRowHtml(label, amount, budget, max) {
   const overBudget = budget > 0 && amount > budget;
 
   let barHtml, budgetHtml = '';
@@ -840,7 +848,7 @@ function buildPeriodRowHtml(label, amount, periodTotal, budget, max) {
     <div class="breakdown-period">
       <div class="breakdown-row">
         <span class="breakdown-period-label">${escapeHtml(label)}</span>
-        <span class="breakdown-amount">${money(amount)} · ${pct}%</span>
+        <span class="breakdown-amount">${money(amount)}</span>
       </div>
       <div class="bar-track">${barHtml}</div>
       ${budgetHtml}
@@ -852,14 +860,15 @@ function renderReport() {
   renderMonthSelect();
   renderCompareMonthSelect();
   const month = data.months.find(m => m.id === selectedMonthId);
-  const compareMonth = selectedCompareMonthId ? data.months.find(m => m.id === selectedCompareMonthId) : null;
+  const compareMonth = selectedCompareMonthId && selectedCompareMonthId !== NO_COMPARE
+    ? data.months.find(m => m.id === selectedCompareMonthId)
+    : null;
 
   const total = monthTotal(month);
   reportTotal.textContent = money(total);
 
   const totals = categoryTotals(month);
   const compareTotals = compareMonth ? categoryTotals(compareMonth) : new Map();
-  const compareTotal = compareMonth ? monthTotal(compareMonth) : 0;
 
   const ids = new Set([...totals.keys(), ...compareTotals.keys()]);
   const rows = [...ids]
@@ -884,10 +893,10 @@ function renderReport() {
     const budget = findCategory(r.id)?.budget || 0;
 
     let html = `<div class="breakdown-category-name">${escapeHtml(r.name)}</div>`;
-    html += buildPeriodRowHtml(month.label, r.amount, total, budget, max);
+    html += buildPeriodRowHtml(month.label, r.amount, budget, max);
 
     if (compareMonth) {
-      html += buildPeriodRowHtml(compareMonth.label, r.compareAmount, compareTotal, budget, compareMax);
+      html += buildPeriodRowHtml(compareMonth.label, r.compareAmount, budget, compareMax);
       const delta = r.amount - r.compareAmount;
       const deltaClass = delta > 0 ? 'delta-up' : delta < 0 ? 'delta-down' : 'delta-flat';
       const sign = delta > 0 ? '+' : '';

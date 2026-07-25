@@ -30,7 +30,13 @@ html, body {
   padding: 0 20px calc(76px + env(safe-area-inset-bottom));
 }
 
-header { padding: calc(36px + env(safe-area-inset-top)) 0 8px; }
+header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--bg);
+  padding: calc(36px + env(safe-area-inset-top)) 0 8px;
+}
 
 .header-row {
   display: flex;

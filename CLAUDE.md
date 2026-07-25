@@ -6,6 +6,10 @@ PWA to track expenditure by category.
 
 Self-contained, no backend — data lives in localStorage on the device.
 
+The header (title + version) is `position: sticky` so it stays visible while
+a screen's content scrolls beneath it (History, Categories, and Summary can
+all get long).
+
 ## Data
 
 `localStorage['money-data']`:
@@ -53,23 +57,26 @@ treatment (see below) — plus a change line under the pair. There's no
 separate comparison list anymore; that was the whole point of stacking them
 per category instead.
 
-Each period row shows amount, share of that period's total, and a bar that's
-always full width and two-toned when the category has a budget: under
-budget it's spend (blue) + headroom (green); over budget it's budget (blue)
-+ the overspend (red) — so blue always represents "budget" and shrinks
-proportionally once you go over it. No-budget categories keep a single-color
-bar sized relative to the biggest category *in that period* (main and
-compare periods are scaled independently, since their totals can differ a
-lot). A category with spend in only one of the two periods still gets both
-rows — the other just shows £0.00 (with a full green bar if it has a budget).
+Each period row shows the amount and a bar that's always full width and
+two-toned when the category has a budget: under budget it's spend (blue) +
+headroom (green); over budget it's budget (blue) + the overspend (red) — so
+blue always represents "budget" and shrinks proportionally once you go over
+it. No-budget categories keep a single-color bar sized relative to the
+biggest category *in that period* (main and compare periods are scaled
+independently, since their totals can differ a lot). A category with spend
+in only one of the two periods still gets both rows — the other just shows
+£0.00 (with a full green bar if it has a budget). No share-of-total
+percentage is shown — it was more noise than signal here.
 
 A second picker ("Compare with") sets which period that second row is —
 defaults to whatever's immediately before the main period chronologically,
-same as before, but the user can pick any other period instead. Its list
-excludes the main period (comparing a period to itself isn't useful) and
-only resets to the default when the current choice becomes invalid (main
-period changed to match it, or it no longer exists) — switching the main
-period otherwise keeps an explicit comparison choice.
+same as before, but the user can pick any other period instead, or `NO_COMPARE`
+("None") to show just the main period with no second row or change line at
+all. Its list excludes the main period (comparing a period to itself isn't
+useful) and only resets to the default when the current choice becomes
+invalid (main period changed to match it, or it no longer exists) —
+switching the main period otherwise keeps an explicit comparison choice,
+including an explicit "None".
 
 Period management lives here too, next
 to the picker: rename (pencil icon), delete (bin icon, confirmed), and start
