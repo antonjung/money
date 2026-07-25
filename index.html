@@ -23,12 +23,6 @@
       <div id="version"></div>
     </header>
 
-    <nav class="tabs">
-      <button class="tab active" data-view="spend">Spend</button>
-      <button class="tab" data-view="history">History</button>
-      <button class="tab" data-view="report">Report</button>
-    </nav>
-
     <main>
       <section id="spendView" class="view">
         <div class="month-banner">
@@ -36,11 +30,15 @@
           <span id="currentMonthTotal"></span>
         </div>
 
+        <div id="noCategoriesMsg" class="empty-state hidden">
+          <p class="muted">No categories yet.</p>
+          <button id="emptyAddCategoryBtn" class="btn btn-secondary" type="button">+ Add category</button>
+        </div>
+
         <form id="spendForm">
           <div class="field">
             <label for="categorySelect">Category</label>
             <select id="categorySelect"></select>
-            <input id="newCategoryInput" class="hidden" type="text" placeholder="New category name" autocomplete="off">
           </div>
           <div class="field">
             <label for="amountInput">Amount</label>
@@ -87,7 +85,31 @@
         <h2 class="section-title">Vs previous period</h2>
         <ul id="comparisonList" class="comparison-list"></ul>
       </section>
+
+      <section id="categoriesView" class="view hidden">
+        <button id="addCategoryBtn" class="btn btn-primary" type="button">+ Add category</button>
+        <ul id="categoryList" class="category-list"></ul>
+      </section>
     </main>
+
+    <nav class="bottom-nav">
+      <button class="nav-tab active" data-view="spend">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        <span>Home</span>
+      </button>
+      <button class="nav-tab" data-view="history">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        <span>List</span>
+      </button>
+      <button class="nav-tab" data-view="report">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
+        <span>Summary</span>
+      </button>
+      <button class="nav-tab" data-view="categories">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41L13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        <span>Categories</span>
+      </button>
+    </nav>
   </div>
 
   <dialog id="menuDialog">
@@ -95,9 +117,6 @@
       <h2>Menu</h2>
       <p class="muted">Current period: <span id="menuCurrentLabel"></span></p>
       <button id="startMonthBtn" class="btn btn-secondary">Start new period</button>
-
-      <h3>Categories</h3>
-      <ul id="categoryListMenu" class="category-list"></ul>
 
       <h3>Sharing</h3>
       <div id="groupStatus" class="group-status"></div>
@@ -124,6 +143,27 @@
       <div class="dialog-actions">
         <button id="startMonthCancelBtn" class="btn btn-ghost">Cancel</button>
         <button id="startMonthConfirmBtn" class="btn btn-danger">Start period</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="addCategoryDialog">
+    <div class="dialog-content">
+      <h2>Add category</h2>
+      <div class="field">
+        <label for="newCategoryNameInput">Name</label>
+        <input id="newCategoryNameInput" type="text" placeholder="e.g. Groceries" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="newCategoryBudgetInput">Monthly budget (optional)</label>
+        <div class="input-row">
+          <span class="unit">£</span>
+          <input id="newCategoryBudgetInput" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00">
+        </div>
+      </div>
+      <div class="dialog-actions">
+        <button id="addCategoryCancelBtn" class="btn btn-ghost">Cancel</button>
+        <button id="addCategoryConfirmBtn" class="btn btn-primary">Add category</button>
       </div>
     </div>
   </dialog>

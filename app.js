@@ -1,4 +1,4 @@
-const APP_VERSION = 'v1.3';
+const APP_VERSION = 'v1.4';
 
 // ── Storage ───────────────────────────────────────────────────────────────────
 
@@ -357,16 +357,18 @@ async function initGroupFromStorage() {
 
 const BIN_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
 
-const tabs = document.querySelectorAll('.tab');
+const tabs = document.querySelectorAll('.nav-tab');
 const spendView = document.getElementById('spendView');
 const historyView = document.getElementById('historyView');
 const reportView = document.getElementById('reportView');
+const categoriesView = document.getElementById('categoriesView');
 
 const currentMonthLabel = document.getElementById('currentMonthLabel');
 const currentMonthTotal = document.getElementById('currentMonthTotal');
+const noCategoriesMsg = document.getElementById('noCategoriesMsg');
+const emptyAddCategoryBtn = document.getElementById('emptyAddCategoryBtn');
 const spendForm = document.getElementById('spendForm');
 const categorySelect = document.getElementById('categorySelect');
-const newCategoryInput = document.getElementById('newCategoryInput');
 const amountInput = document.getElementById('amountInput');
 const spendDateInput = document.getElementById('spendDateInput');
 const noteInput = document.getElementById('noteInput');
@@ -381,11 +383,18 @@ const reportTotal = document.getElementById('reportTotal');
 const categoryBreakdown = document.getElementById('categoryBreakdown');
 const comparisonList = document.getElementById('comparisonList');
 
+const categoryList = document.getElementById('categoryList');
+const addCategoryBtn = document.getElementById('addCategoryBtn');
+const addCategoryDialog = document.getElementById('addCategoryDialog');
+const newCategoryNameInput = document.getElementById('newCategoryNameInput');
+const newCategoryBudgetInput = document.getElementById('newCategoryBudgetInput');
+const addCategoryCancelBtn = document.getElementById('addCategoryCancelBtn');
+const addCategoryConfirmBtn = document.getElementById('addCategoryConfirmBtn');
+
 const menuBtn = document.getElementById('menuBtn');
 const menuDialog = document.getElementById('menuDialog');
 const menuCurrentLabel = document.getElementById('menuCurrentLabel');
 const startMonthBtn = document.getElementById('startMonthBtn');
-const categoryListMenu = document.getElementById('categoryListMenu');
 const closeMenuBtn = document.getElementById('closeMenuBtn');
 const groupNameInput = document.getElementById('groupNameInput');
 const groupPinInput = document.getElementById('groupPinInput');
@@ -435,8 +444,10 @@ tabs.forEach(tab => {
     spendView.classList.toggle('hidden', view !== 'spend');
     historyView.classList.toggle('hidden', view !== 'history');
     reportView.classList.toggle('hidden', view !== 'report');
+    categoriesView.classList.toggle('hidden', view !== 'categories');
     if (view === 'history') renderHistoryView();
     if (view === 'report') renderReport();
+    if (view === 'categories') renderCategoriesView();
   });
 });
 
@@ -452,26 +463,12 @@ function renderCategorySelect() {
     opt.textContent = cat.name;
     categorySelect.appendChild(opt);
   }
-  const newOpt = document.createElement('option');
-  newOpt.value = '__new__';
-  newOpt.textContent = '+ Add new category…';
-  categorySelect.appendChild(newOpt);
+  if (sorted.some(c => c.id === prev)) categorySelect.value = prev;
 
-  if (sorted.some(c => c.id === prev)) {
-    categorySelect.value = prev;
-  } else if (!sorted.length) {
-    categorySelect.value = '__new__';
-  }
-  toggleNewCategoryInput();
+  const hasCategories = sorted.length > 0;
+  noCategoriesMsg.classList.toggle('hidden', hasCategories);
+  spendForm.classList.toggle('hidden', !hasCategories);
 }
-
-function toggleNewCategoryInput() {
-  const isNew = categorySelect.value === '__new__';
-  newCategoryInput.classList.toggle('hidden', !isNew);
-  if (isNew) newCategoryInput.focus();
-}
-
-categorySelect.addEventListener('change', toggleNewCategoryInput);
 
 function renderCurrentMonthBanner() {
   const month = currentMonth();
@@ -524,6 +521,7 @@ function renderMoneyViews() {
   renderCurrentMonthBanner();
   renderHistoryView();
   if (!reportView.classList.contains('hidden')) renderReport();
+  if (!categoriesView.classList.contains('hidden')) renderCategoriesView();
 }
 
 function escapeHtml(str) {
@@ -534,13 +532,8 @@ function escapeHtml(str) {
 
 spendForm.addEventListener('submit', e => {
   e.preventDefault();
-  let categoryId = categorySelect.value;
-
-  if (categoryId === '__new__') {
-    const cat = addCategory(newCategoryInput.value);
-    if (!cat) { newCategoryInput.focus(); return; }
-    categoryId = cat.id;
-  }
+  const categoryId = categorySelect.value;
+  if (!categoryId) return;
 
   const amount = parseFloat(amountInput.value);
   if (!amount || amount <= 0) { amountInput.focus(); return; }
@@ -549,13 +542,54 @@ spendForm.addEventListener('submit', e => {
 
   amountInput.value = '';
   noteInput.value = '';
-  newCategoryInput.value = '';
   spendDateInput.value = todayISODate();
-  renderCategorySelect();
   categorySelect.value = categoryId;
-  toggleNewCategoryInput();
   renderMoneyViews();
   amountInput.focus();
+});
+
+// ── Categories view ───────────────────────────────────────────────────────────
+
+function renderCategoriesView() {
+  categoryList.innerHTML = '';
+  const sorted = [...data.categories].sort((a, b) => a.name.localeCompare(b.name));
+  if (!sorted.length) {
+    categoryList.innerHTML = '<li class="empty-msg">No categories yet.</li>';
+    return;
+  }
+  for (const cat of sorted) {
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <span class="category-name">${escapeHtml(cat.name)}</span>
+      <input type="number" class="category-budget-input" min="0" step="0.01" inputmode="decimal" placeholder="No budget" value="${cat.budget ? cat.budget : ''}">
+    `;
+    li.querySelector('.category-budget-input').addEventListener('change', e => {
+      const val = parseFloat(e.target.value);
+      setCategoryBudget(cat.id, !val || val < 0 ? 0 : val);
+    });
+    categoryList.appendChild(li);
+  }
+}
+
+function openAddCategoryDialog() {
+  newCategoryNameInput.value = '';
+  newCategoryBudgetInput.value = '';
+  addCategoryDialog.showModal();
+  newCategoryNameInput.focus();
+}
+
+addCategoryBtn.addEventListener('click', openAddCategoryDialog);
+emptyAddCategoryBtn.addEventListener('click', openAddCategoryDialog);
+
+addCategoryCancelBtn.addEventListener('click', () => addCategoryDialog.close());
+
+addCategoryConfirmBtn.addEventListener('click', () => {
+  const cat = addCategory(newCategoryNameInput.value);
+  if (!cat) { newCategoryNameInput.focus(); return; }
+  const budget = parseFloat(newCategoryBudgetInput.value);
+  if (budget > 0) setCategoryBudget(cat.id, budget);
+  addCategoryDialog.close();
+  renderAll();
 });
 
 // ── Report view ───────────────────────────────────────────────────────────────
@@ -660,24 +694,6 @@ function renderAll() {
 
 menuBtn.addEventListener('click', () => {
   menuCurrentLabel.textContent = currentMonth().label;
-  categoryListMenu.innerHTML = '';
-  const sorted = [...data.categories].sort((a, b) => a.name.localeCompare(b.name));
-  if (!sorted.length) {
-    categoryListMenu.innerHTML = '<li class="empty-msg">No categories yet.</li>';
-  } else {
-    for (const cat of sorted) {
-      const li = document.createElement('li');
-      li.innerHTML = `
-        <span class="category-name">${escapeHtml(cat.name)}</span>
-        <input type="number" class="category-budget-input" min="0" step="0.01" inputmode="decimal" placeholder="No budget" value="${cat.budget ? cat.budget : ''}">
-      `;
-      li.querySelector('.category-budget-input').addEventListener('change', e => {
-        const val = parseFloat(e.target.value);
-        setCategoryBudget(cat.id, !val || val < 0 ? 0 : val);
-      });
-      categoryListMenu.appendChild(li);
-    }
-  }
   updateGroupUI();
   menuDialog.showModal();
 });

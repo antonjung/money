@@ -22,32 +22,33 @@ across months, each with an optional monthly `budget` (0 = none set).
 
 ## Functions
 
-### spend / history / report tabs
-Spend is entry-only (category, amount, date, optional note) — it doesn't list
-anything, so it stays fast to use repeatedly. History shows the current
-month's recorded spends (editable date, delete with confirmation). Report
-covers everything else per-month.
+Bottom nav, four screens (icon + label, like the `rehearsal` app):
 
-### start new month
-Prompts for a name (prefilled with today's date, editable) and archives the
-current month (sets `endedAt`) before starting the new one.
+### Home (spend view)
+Entry-only — category, amount, date (defaults to today, editable), optional
+note — no list, so it stays fast to use repeatedly. If there are no
+categories yet, the form is replaced with a prompt to add one (categories are
+managed on their own screen now, not created inline here).
 
-### delete month
-From Report, deletes the selected month and its spends (confirmed — this
-can't be undone). Deleting the current month reopens whatever month is now
-last as current; deleting the last remaining month leaves a fresh empty one
-(the app always has at least one month).
+### List (history view)
+The current period's recorded spends: date is editable inline, delete asks
+for confirmation.
 
-### add spend
-Pick an existing category or add a new one inline (budget set separately, via
-the category list in the menu), enter an amount and date (defaults to today,
-changeable both at entry and afterwards in History), optional note.
-
-### report
-Choose a month (default: current). Shows the category breakdown (amount,
+### Summary (report view)
+Choose a period (default: current). Shows the category breakdown (amount,
 share of total, and — if the category has a budget — over/under and by how
-much) and compares it against the month immediately before it chronologically
-(per-category delta).
+much) and compares it against the period immediately before it
+chronologically (per-category delta). Starting/deleting a period both live
+here: start prompts for a name (prefilled with today's date, editable) and
+archives the current one; delete removes the selected period and its spends
+(confirmed — can't be undone). Deleting the current period reopens whatever's
+now last as current; deleting the last one leaves a fresh empty period (the
+app always has at least one).
+
+### Categories
+Add a category (name + optional monthly budget together, one step) and edit
+any category's budget inline. This is the only way to create a category —
+there's no quick-add from Home, to keep that form from doing two jobs at once.
 
 ## Group sharing
 
