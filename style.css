@@ -340,7 +340,7 @@ input.spend-date-input {
   padding-top: 1px;
 }
 
-.spend-delete {
+.spend-edit, .spend-delete {
   background: none;
   border: none;
   color: var(--muted);
@@ -349,7 +349,8 @@ input.spend-date-input {
   flex-shrink: 0;
   display: flex;
 }
-.spend-delete svg { width: 18px; height: 18px; }
+.spend-edit svg, .spend-delete svg { width: 18px; height: 18px; }
+.spend-edit:active { color: var(--accent); }
 .spend-delete:active { color: var(--danger); }
 
 .empty-msg { color: var(--muted); text-align: center; padding: 32px 0; font-size: 0.9rem; }
@@ -389,7 +390,7 @@ input.spend-date-input {
 .breakdown-row {
   display: flex;
   justify-content: space-between;
-  font-size: 0.95rem;
+  align-items: baseline;
   margin-bottom: 6px;
 }
 
@@ -399,7 +400,12 @@ input.spend-date-input {
   letter-spacing: 0.04em;
   color: var(--muted);
 }
-.breakdown-amount { font-variant-numeric: tabular-nums; color: var(--muted); }
+.breakdown-amount {
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  font-size: 1.7rem;
+  font-weight: 800;
+}
 
 .bar-track { display: flex; background: var(--surface); border-radius: 6px; height: 8px; overflow: hidden; }
 .bar-segment { height: 100%; }
@@ -407,10 +413,6 @@ input.spend-date-input {
 .bar-segment.blue { background: var(--blue); }
 .bar-segment.green { background: var(--accent); }
 .bar-segment.red { background: var(--danger); }
-
-.breakdown-budget { font-size: 0.8rem; margin-top: 4px; }
-.breakdown-budget.under-budget { color: var(--muted); }
-.breakdown-budget.over-budget { color: var(--danger); }
 
 .breakdown-delta { font-size: 0.85rem; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 8px; }
 .delta-up { color: var(--danger); }
@@ -468,6 +470,13 @@ dialog::backdrop { background: rgba(0,0,0,0.5); }
 }
 .category-list li:last-child { border-bottom: none; }
 .category-list .empty-msg { padding: 8px 0; }
+
+.category-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
 
 .budget-total {
   color: var(--muted);

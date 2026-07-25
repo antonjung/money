@@ -1,4 +1,4 @@
-const APP_VERSION = 'v2.1';
+const APP_VERSION = 'v2.2';
 
 // ── Sound ─────────────────────────────────────────────────────────────────────
 
@@ -97,6 +97,18 @@ function setCategoryBudget(categoryId, budget) {
   saveData();
 }
 
+// Spends reference categories by id, not name, so renaming here is all
+// that's needed — every spend already shows whatever the category is
+// currently called, nothing to update on the spends themselves.
+function renameCategory(categoryId, newName) {
+  const cat = findCategory(categoryId);
+  if (!cat) return;
+  newName = (newName || '').trim();
+  if (!newName) return;
+  cat.name = newName;
+  saveData();
+}
+
 // ── Spends ────────────────────────────────────────────────────────────────────
 
 function addSpend(categoryId, amount) {
@@ -119,6 +131,16 @@ function updateSpendDate(monthId, spendId, newDate) {
   const spend = month.spends.find(s => s.id === spendId);
   if (!spend) return;
   spend.at = newDate;
+  saveData();
+}
+
+function updateSpend(monthId, spendId, categoryId, amount) {
+  const month = data.months.find(m => m.id === monthId);
+  if (!month) return;
+  const spend = month.spends.find(s => s.id === spendId);
+  if (!spend) return;
+  spend.categoryId = categoryId;
+  spend.amount = amount;
   saveData();
 }
 
@@ -483,7 +505,18 @@ const amountInput = document.getElementById('amountInput');
 
 const historyMonthLabel = document.getElementById('historyMonthLabel');
 const historyMonthTotal = document.getElementById('historyMonthTotal');
+const historyFilterTrigger = document.getElementById('historyFilterTrigger');
+const historyFilterTriggerLabel = document.getElementById('historyFilterTriggerLabel');
+const historyFilterDropdown = document.getElementById('historyFilterDropdown');
 const spendList = document.getElementById('spendList');
+
+const editSpendDialog = document.getElementById('editSpendDialog');
+const editSpendCategoryTrigger = document.getElementById('editSpendCategoryTrigger');
+const editSpendCategoryTriggerLabel = document.getElementById('editSpendCategoryTriggerLabel');
+const editSpendCategoryDropdown = document.getElementById('editSpendCategoryDropdown');
+const editSpendAmountInput = document.getElementById('editSpendAmountInput');
+const editSpendCancelBtn = document.getElementById('editSpendCancelBtn');
+const editSpendConfirmBtn = document.getElementById('editSpendConfirmBtn');
 
 const noPeriodsMsg = document.getElementById('noPeriodsMsg');
 const reportGoToPeriodsBtn = document.getElementById('reportGoToPeriodsBtn');
@@ -505,6 +538,11 @@ const newCategoryNameInput = document.getElementById('newCategoryNameInput');
 const newCategoryBudgetInput = document.getElementById('newCategoryBudgetInput');
 const addCategoryCancelBtn = document.getElementById('addCategoryCancelBtn');
 const addCategoryConfirmBtn = document.getElementById('addCategoryConfirmBtn');
+
+const renameCategoryDialog = document.getElementById('renameCategoryDialog');
+const renameCategoryInput = document.getElementById('renameCategoryInput');
+const renameCategoryCancelBtn = document.getElementById('renameCategoryCancelBtn');
+const renameCategoryConfirmBtn = document.getElementById('renameCategoryConfirmBtn');
 
 const periodList = document.getElementById('periodList');
 const addPeriodBtn = document.getElementById('addPeriodBtn');
@@ -634,6 +672,54 @@ function renderCurrentMonthBanner() {
   currentMonthTotal.textContent = month ? money(monthTotal(month)) : '';
 }
 
+let historyFilterCategoryId = null; // null = all categories
+
+function closeHistoryFilterDropdown() {
+  historyFilterDropdown.classList.add('hidden');
+  historyFilterTrigger.classList.remove('open');
+}
+
+function toggleHistoryFilterDropdown() {
+  const isOpen = !historyFilterDropdown.classList.contains('hidden');
+  if (isOpen) closeHistoryFilterDropdown();
+  else {
+    historyFilterDropdown.classList.remove('hidden');
+    historyFilterTrigger.classList.add('open');
+  }
+}
+
+historyFilterTrigger.addEventListener('click', toggleHistoryFilterDropdown);
+
+function selectHistoryFilter(categoryId) {
+  historyFilterCategoryId = categoryId;
+  closeHistoryFilterDropdown();
+  renderHistoryView();
+}
+
+function renderHistoryFilterDropdown() {
+  const sorted = [...data.categories].sort((a, b) => a.name.localeCompare(b.name));
+  historyFilterDropdown.innerHTML = '';
+
+  const allItem = document.createElement('button');
+  allItem.type = 'button';
+  allItem.className = 'dropdown-item' + (!historyFilterCategoryId ? ' selected' : '');
+  allItem.textContent = 'All categories';
+  allItem.addEventListener('click', () => selectHistoryFilter(null));
+  historyFilterDropdown.appendChild(allItem);
+
+  for (const cat of sorted) {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'dropdown-item' + (cat.id === historyFilterCategoryId ? ' selected' : '');
+    item.textContent = cat.name;
+    item.addEventListener('click', () => selectHistoryFilter(cat.id));
+    historyFilterDropdown.appendChild(item);
+  }
+
+  const selectedCat = historyFilterCategoryId ? findCategory(historyFilterCategoryId) : null;
+  historyFilterTriggerLabel.textContent = selectedCat ? selectedCat.name : 'All categories';
+}
+
 function renderHistoryView() {
   const month = currentMonth();
   if (!month) {
@@ -645,12 +731,20 @@ function renderHistoryView() {
   historyMonthLabel.textContent = month.label;
   historyMonthTotal.textContent = money(monthTotal(month));
 
+  renderHistoryFilterDropdown();
+
+  const filtered = historyFilterCategoryId
+    ? month.spends.filter(s => s.categoryId === historyFilterCategoryId)
+    : month.spends;
+
   spendList.innerHTML = '';
-  if (!month.spends.length) {
-    spendList.innerHTML = '<li class="empty-msg">No spends recorded yet this period.</li>';
+  if (!filtered.length) {
+    spendList.innerHTML = month.spends.length
+      ? '<li class="empty-msg">No spends in this category.</li>'
+      : '<li class="empty-msg">No spends recorded yet this period.</li>';
     return;
   }
-  const sorted = [...month.spends].sort((a, b) => b.at.localeCompare(a.at) || b.id.localeCompare(a.id));
+  const sorted = [...filtered].sort((a, b) => b.at.localeCompare(a.at) || b.id.localeCompare(a.id));
   for (const s of sorted) {
     const cat = findCategory(s.categoryId);
     const li = document.createElement('li');
@@ -664,12 +758,14 @@ function renderHistoryView() {
         </div>
       </div>
       <div class="spend-amount">${money(s.amount)}</div>
+      <button class="spend-edit" aria-label="Edit">${PENCIL_ICON_SVG}</button>
       <button class="spend-delete" aria-label="Delete">${BIN_ICON_SVG}</button>
     `;
     li.querySelector('.spend-date-input').addEventListener('change', e => {
       updateSpendDate(month.id, s.id, e.target.value || todayISODate());
       renderHistoryView();
     });
+    li.querySelector('.spend-edit').addEventListener('click', () => openEditSpendDialog(month.id, s.id));
     li.querySelector('.spend-delete').addEventListener('click', () => {
       openConfirm(
         'Delete spend?',
@@ -680,6 +776,69 @@ function renderHistoryView() {
     spendList.appendChild(li);
   }
 }
+
+// ── Edit spend ────────────────────────────────────────────────────────────────
+
+let pendingEditSpend = null; // { monthId, spendId }
+let editSpendSelectedCategoryId = null;
+
+function closeEditSpendCategoryDropdown() {
+  editSpendCategoryDropdown.classList.add('hidden');
+  editSpendCategoryTrigger.classList.remove('open');
+}
+
+function toggleEditSpendCategoryDropdown() {
+  const isOpen = !editSpendCategoryDropdown.classList.contains('hidden');
+  if (isOpen) closeEditSpendCategoryDropdown();
+  else {
+    editSpendCategoryDropdown.classList.remove('hidden');
+    editSpendCategoryTrigger.classList.add('open');
+  }
+}
+
+editSpendCategoryTrigger.addEventListener('click', toggleEditSpendCategoryDropdown);
+
+function renderEditSpendCategoryDropdown() {
+  const sorted = [...data.categories].sort((a, b) => a.name.localeCompare(b.name));
+  editSpendCategoryDropdown.innerHTML = '';
+  for (const cat of sorted) {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'dropdown-item' + (cat.id === editSpendSelectedCategoryId ? ' selected' : '');
+    item.textContent = cat.name;
+    item.addEventListener('click', () => {
+      editSpendSelectedCategoryId = cat.id;
+      closeEditSpendCategoryDropdown();
+      renderEditSpendCategoryDropdown();
+      editSpendCategoryTriggerLabel.textContent = cat.name;
+    });
+    editSpendCategoryDropdown.appendChild(item);
+  }
+}
+
+function openEditSpendDialog(monthId, spendId) {
+  const month = data.months.find(m => m.id === monthId);
+  const spend = month?.spends.find(s => s.id === spendId);
+  if (!month || !spend) return;
+  pendingEditSpend = { monthId, spendId };
+  editSpendSelectedCategoryId = spend.categoryId;
+  const cat = findCategory(spend.categoryId);
+  editSpendCategoryTriggerLabel.textContent = cat ? cat.name : 'Select category';
+  editSpendAmountInput.value = spend.amount;
+  renderEditSpendCategoryDropdown();
+  editSpendDialog.showModal();
+}
+
+editSpendCancelBtn.addEventListener('click', () => editSpendDialog.close());
+
+editSpendConfirmBtn.addEventListener('click', () => {
+  if (!pendingEditSpend || !editSpendSelectedCategoryId) return;
+  const amount = parseFloat(editSpendAmountInput.value);
+  if (!amount || amount <= 0) { editSpendAmountInput.focus(); return; }
+  updateSpend(pendingEditSpend.monthId, pendingEditSpend.spendId, editSpendSelectedCategoryId, amount);
+  editSpendDialog.close();
+  renderAll();
+});
 
 function renderMoneyViews() {
   renderCurrentMonthBanner();
@@ -730,16 +889,40 @@ function renderCategoriesView() {
     const li = document.createElement('li');
     li.innerHTML = `
       <span class="category-name">${escapeHtml(cat.name)}</span>
-      <input type="number" class="category-budget-input" min="0" step="0.01" inputmode="decimal" placeholder="No budget" value="${cat.budget ? cat.budget : ''}">
+      <div class="category-row-actions">
+        <input type="number" class="category-budget-input" min="0" step="0.01" inputmode="decimal" placeholder="No budget" value="${cat.budget ? cat.budget : ''}">
+        <button type="button" class="icon-btn-square rename-category-btn" aria-label="Rename category">${PENCIL_ICON_SVG}</button>
+      </div>
     `;
     li.querySelector('.category-budget-input').addEventListener('change', e => {
       const val = parseFloat(e.target.value);
       setCategoryBudget(cat.id, !val || val < 0 ? 0 : val);
       renderCategoriesView();
     });
+    li.querySelector('.rename-category-btn').addEventListener('click', () => openRenameCategoryDialog(cat.id));
     categoryList.appendChild(li);
   }
 }
+
+let pendingRenameCategoryId = null;
+
+function openRenameCategoryDialog(categoryId) {
+  const cat = findCategory(categoryId);
+  if (!cat) return;
+  pendingRenameCategoryId = categoryId;
+  renameCategoryInput.value = cat.name;
+  renameCategoryDialog.showModal();
+  renameCategoryInput.focus();
+}
+
+renameCategoryCancelBtn.addEventListener('click', () => renameCategoryDialog.close());
+
+renameCategoryConfirmBtn.addEventListener('click', () => {
+  if (!pendingRenameCategoryId) return;
+  renameCategory(pendingRenameCategoryId, renameCategoryInput.value);
+  renameCategoryDialog.close();
+  renderAll();
+});
 
 function openAddCategoryDialog() {
   newCategoryNameInput.value = '';
@@ -882,10 +1065,8 @@ function renderCompareMonthSelect() {
 function buildPeriodRowHtml(label, amount, budget, max) {
   const overBudget = budget > 0 && amount > budget;
 
-  let barHtml, budgetHtml = '';
+  let barHtml;
   if (budget > 0) {
-    const remaining = budget - amount;
-    budgetHtml = `<div class="breakdown-budget ${overBudget ? 'over-budget' : 'under-budget'}">${overBudget ? `Over by ${money(-remaining)}` : `${money(remaining)} left`} of ${money(budget)} budget</div>`;
     const bluePct = overBudget ? (budget / amount) * 100 : (amount / budget) * 100;
     const secondClass = overBudget ? 'red' : 'green';
     barHtml = `<div class="bar-segment blue" style="width:${bluePct}%"></div><div class="bar-segment ${secondClass}" style="width:${100 - bluePct}%"></div>`;
@@ -900,7 +1081,6 @@ function buildPeriodRowHtml(label, amount, budget, max) {
         <span class="breakdown-amount">${money(amount)}</span>
       </div>
       <div class="bar-track">${barHtml}</div>
-      ${budgetHtml}
     </div>
   `;
 }

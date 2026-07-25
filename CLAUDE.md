@@ -61,9 +61,14 @@ add one (categories are managed on their own screen, not created inline
 here).
 
 ### List (history view)
-The current period's recorded spends: date is editable inline (the only place
-a spend's date can be changed), delete asks for confirmation. Shows a "no
-current period" prompt if there isn't one.
+A "Filter by category" dropdown (same expandable-list pattern, with an "All
+categories" option) narrows the list below it; the period total in the
+banner always stays the whole period's total regardless of the filter, only
+the list itself is filtered. The current period's recorded spends: date is
+editable inline, pencil icon opens Edit spend (category + amount, via
+`openEditSpendDialog`/`updateSpend` — category picker is the same
+dropdown-trigger pattern, sourced live from `data.categories`), bin icon
+deletes (confirmed). Shows a "no current period" prompt if there isn't one.
 
 ### Summary (report view)
 Empty state if there are no periods at all (`data.months.length === 0`) —
@@ -75,16 +80,19 @@ treatment (see below) — plus a change line under the pair. There's no
 separate comparison list; that was the whole point of stacking them per
 category instead.
 
-Each period row shows the amount and a bar that's always full width and
-two-toned when the category has a budget: under budget it's spend (blue) +
-headroom (green); over budget it's budget (blue) + the overspend (red) — so
-blue always represents "budget" and shrinks proportionally once you go over
-it. No-budget categories keep a single-color bar sized relative to the
-biggest category *in that period* (main and compare periods are scaled
-independently, since their totals can differ a lot). A category with spend
-in only one of the two periods still gets both rows — the other just shows
-£0.00 (with a full green bar if it has a budget). No share-of-total
-percentage is shown — it was more noise than signal here.
+Each period row shows the amount in large bold text (`.breakdown-amount`,
+1.7rem/800 weight — the headline number the screen exists to show) and a bar
+that's always full width and two-toned when the category has a budget:
+under budget it's spend (blue) + headroom (green); over budget it's budget
+(blue) + the overspend (red) — so blue always represents "budget" and
+shrinks proportionally once you go over it. No-budget categories keep a
+single-color bar sized relative to the biggest category *in that period*
+(main and compare periods are scaled independently, since their totals can
+differ a lot). A category with spend in only one of the two periods still
+gets both rows — the other just shows £0.00 (with a full green bar if it has
+a budget). No share-of-total percentage or "£X left/over budget" text is
+shown any more — the bar already carries that, the text was redundant noise
+next to a number this size.
 
 A second picker ("Compare with") sets which period that second row is —
 defaults to whatever's immediately before the main period chronologically
@@ -108,6 +116,11 @@ open), so it can't go stale while you're editing. This is the only way to
 create a category — there's no quick-add from Home, to keep that form from
 doing two jobs at once. Shows the combined budget total across all
 categories above the list when any category has one set.
+
+Pencil icon opens a rename dialog (`renameCategory`) — just updates
+`cat.name`. Spends reference categories by id, not by a copied name string,
+so every spend everywhere picks up the new name automatically; there's
+nothing to cascade or migrate.
 
 ### Periods
 All period management lives here, replacing what used to be split between a
