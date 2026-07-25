@@ -99,8 +99,15 @@ rehearsal's `#org=X&pin=Y` invite pattern) and hands it to `navigator.share`
 if available, otherwise copies it to the clipboard. Opening that link
 (`joinGroupFromUrl`, checked before the normal silent reconnect on load)
 strips the hash and joins that group automatically — same `joinGroup` path
-as typing it in manually, so the existing "replace this device's data?"
-confirmation still applies if the device already has local data.
+as typing it in manually. `joinGroup` skips the "replace this device's
+data?" confirmation when the device is already configured for that same
+group (compares against what's in `GROUP_STORAGE_KEY`) — reconnecting via
+your own invite link isn't a data-replacing *switch*, so it shouldn't
+prompt like one. It also now returns whether the join actually succeeded,
+so `joinGroupFromUrl` can correctly fall back to the normal silent
+reconnect if it didn't (wrong PIN, no connection, or a declined switch to a
+genuinely different group) — a bug previously left the device unjoined in
+exactly that case.
 
 - `groups/{sha256(normalized name)}` — one document per group, whole-state
   (categories + months), last-write-wins.

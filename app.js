@@ -1,4 +1,4 @@
-const APP_VERSION = 'v1.13';
+const APP_VERSION = 'v1.14';
 
 // ── Sound ─────────────────────────────────────────────────────────────────────
 
@@ -359,8 +359,18 @@ function startGroupListener() {
 async function joinGroup(name, pin, { silent = false } = {}) {
   name = name.trim();
   pin = pin.trim();
-  if (!name || !pin) { setGroupStatus('Enter a group name and PIN.', 'error'); return; }
-  if (!firebaseConfigured()) { setGroupStatus('Sharing is not configured for this app.', 'error'); return; }
+  if (!name || !pin) { setGroupStatus('Enter a group name and PIN.', 'error'); return false; }
+  if (!firebaseConfigured()) { setGroupStatus('Sharing is not configured for this app.', 'error'); return false; }
+
+  // Reconnecting to the group this device is already configured for (e.g. via
+  // its own invite link, or a silent reconnect on load) isn't a *switch* —
+  // don't warn about replacing data, there's nothing being replaced with
+  // anything different. Only genuinely joining a different group needs that.
+  let alreadyThisGroup = false;
+  try {
+    const saved = JSON.parse(localStorage.getItem(GROUP_STORAGE_KEY));
+    alreadyThisGroup = !!saved && normalizeGroupName(saved.name) === normalizeGroupName(name);
+  } catch {}
 
   if (!silent) setGroupStatus('Connecting…');
   try {
@@ -377,14 +387,12 @@ async function joinGroup(name, pin, { silent = false } = {}) {
         decoded = await decryptFromGroup(snap.data(), key);
       } catch {
         setGroupStatus('Wrong group name or PIN.', 'error');
-        return;
+        return false;
       }
-      // Reconnecting to a group already joined on this device (e.g. on page load)
-      // shouldn't re-prompt — the local data *is* that group's data already.
       const hasLocalContent = data.categories.length || data.months.some(m => m.spends.length);
-      if (!silent && hasLocalContent && !confirm(`Joining "${name}" replaces this device's data with the group's shared data. Continue?`)) {
+      if (!silent && !alreadyThisGroup && hasLocalContent && !confirm(`Joining "${name}" replaces this device's data with the group's shared data. Continue?`)) {
         setGroupStatus('Not shared — data stays on this device.');
-        return;
+        return false;
       }
       data.categories = decoded.categories || [];
       data.months = decoded.months && decoded.months.length ? decoded.months : data.months;
@@ -400,8 +408,10 @@ async function joinGroup(name, pin, { silent = false } = {}) {
     startGroupListener();
     updateGroupUI();
     renderAll();
+    return true;
   } catch (err) {
     setGroupStatus('Could not connect — check your connection and try again.', 'error');
+    return false;
   }
 }
 
@@ -421,14 +431,14 @@ async function initGroupFromStorage() {
 }
 
 // Picks up group + PIN from an invite link, e.g. .../#group=X&pin=Y (see
-// buildInviteUrl/inviteToGroup). Returns whether it found and used one, so
-// init can skip the normal silent reconnect in that case.
+// buildInviteUrl/inviteToGroup). Returns whether it actually joined, so init
+// can fall back to the normal silent reconnect if this didn't work out
+// (wrong PIN, no connection, or the user declined replacing local data).
 async function joinGroupFromUrl() {
   const match = location.hash.match(/^#group=([^&]+)&pin=([^&]+)$/);
   if (!match) return false;
   history.replaceState(null, '', location.pathname + location.search);
-  await joinGroup(decodeURIComponent(match[1]), decodeURIComponent(match[2]));
-  return true;
+  return await joinGroup(decodeURIComponent(match[1]), decodeURIComponent(match[2]));
 }
 
 // ── Elements ──────────────────────────────────────────────────────────────────
