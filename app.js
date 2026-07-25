@@ -1,26 +1,31 @@
-const APP_VERSION = 'v1.12';
+const APP_VERSION = 'v1.13';
 
 // ── Sound ─────────────────────────────────────────────────────────────────────
 
 let audioCtx = null;
 
-// Short rising "ding" confirming a spend was added. Created lazily inside a
-// user-gesture handler (the form submit) to satisfy autoplay policies.
+// Soft two-note chime (C5 then E5) confirming a spend was added — gentle
+// attack/decay rather than a sharp arcade-blip sweep. Created lazily inside
+// a user-gesture handler (the form submit) to satisfy autoplay policies.
 function playAddedSound() {
   try {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(1320, audioCtx.currentTime + 0.08);
-    gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
-    osc.start(audioCtx.currentTime);
-    osc.stop(audioCtx.currentTime + 0.15);
+    const now = audioCtx.currentTime;
+    [523.25, 659.25].forEach((freq, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const start = now + i * 0.09;
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(0.16, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.4);
+      osc.start(start);
+      osc.stop(start + 0.4);
+    });
   } catch {
     // Web Audio unavailable/blocked — the sound is a nice-to-have, skip silently.
   }

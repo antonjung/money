@@ -30,7 +30,7 @@ Bottom nav, four screens (icon + label, like the `rehearsal` app):
 ### Home (spend view)
 Entry-only — category, amount — nothing else, so it's as fast as possible for
 repeated use. Blurs the amount field after adding (closes the numeric
-keypad) rather than refocusing it, and plays a short Web Audio "ding"
+keypad) rather than refocusing it, and plays a soft two-note chime
 (`playAddedSound`, same lazy-AudioContext-in-a-user-gesture pattern as the
 `timeit` app) as an audible confirmation. The category picker is an
 expandable list
