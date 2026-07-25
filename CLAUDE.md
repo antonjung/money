@@ -82,37 +82,36 @@ category change.
 
 ### Summary (report view)
 Empty state if there are no periods at all (`data.months.length === 0`) —
-otherwise, choose a period (default: current). One `<li>` per category
-(union of both periods' categories, sorted by main-period spend), each
-holding its own period rows stacked vertically — main period first, then the
-compare period directly underneath, both with the identical amount/budget-bar
-treatment (see below) — plus a change line under the pair. There's no
-separate comparison list; that was the whole point of stacking them per
-category instead.
+otherwise, choose a period (default: current). A compact CSS-grid table
+(`.breakdown-header` + one `.breakdown-item` `<li>` per category, union of
+both periods' categories, sorted by main-period spend): category name,
+current-period amount, compare-period amount, all on one row. Grid columns
+are `1fr 84px 84px` (collapsing to `1fr 84px` via `.breakdown-wrapper.no-compare`
+when there's no compare period), so the header row's period-name labels line
+up with the amount columns beneath them without repeating a label per row —
+this replaced an earlier design that stacked a full labeled sub-row + budget
+bar per period per category, which was far too tall for a screen meant to be
+scanned at a glance.
 
-Each period row shows the amount in large bold text (`.breakdown-amount`,
-1.7rem/800 weight — the headline number the screen exists to show) and a bar
-that's always full width and two-toned when the category has a budget:
-under budget it's spend (blue) + headroom (green); over budget it's budget
-(blue) + the overspend (red) — so blue always represents "budget" and
-shrinks proportionally once you go over it. No-budget categories keep a
-single-color bar sized relative to the biggest category *in that period*
-(main and compare periods are scaled independently, since their totals can
-differ a lot). A category with spend in only one of the two periods still
-gets both rows — the other just shows £0.00 (with a full green bar if it has
-a budget). No share-of-total percentage or "£X left/over budget" text is
-shown any more — the bar already carries that, the text was redundant noise
-next to a number this size.
+Each amount is colored relative to that category's `budget`
+(`budgetColorClass`): green at or under budget, amber up to 10% over, red
+beyond that; no color (default text) when the category has no budget set.
+Current and compare amounts are colored independently against the same
+budget. A category with spend in only one of the two periods still gets a
+value in both columns — the other just shows £0.00. No bars, no
+share-of-total percentage, no "£X left/over budget" text, no change
+line — the two colored numbers side by side already show status and
+direction of change without needing any of that spelled out.
 
-A second picker ("Compare with") sets which period that second row is —
+A second picker ("Compare with") sets which period that second column is —
 defaults to whatever's immediately before the main period chronologically
 (by array/`startedAt` order, unrelated to `currentMonthId`), but the user can
 pick any other period instead, or `NO_COMPARE` ("None") to show just the main
-period with no second row or change line at all. Its list excludes the main
-period (comparing a period to itself isn't useful) and only resets to the
-default when the current choice becomes invalid (main period changed to
-match it, or it no longer exists) — switching the main period otherwise
-keeps an explicit comparison choice, including an explicit "None".
+period with no second column at all. Its list excludes the main period
+(comparing a period to itself isn't useful) and only resets to the default
+when the current choice becomes invalid (main period changed to match it, or
+it no longer exists) — switching the main period otherwise keeps an explicit
+comparison choice, including an explicit "None".
 
 This is purely a *viewing* picker — which period Home adds to is a separate,
 independent concept (see Periods below). You can view July's report while

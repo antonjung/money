@@ -1,4 +1,4 @@
-const APP_VERSION = 'v2.4';
+const APP_VERSION = 'v2.5';
 
 // ── Sound ─────────────────────────────────────────────────────────────────────
 
@@ -567,6 +567,9 @@ const compareMonthTrigger = document.getElementById('compareMonthTrigger');
 const compareMonthTriggerLabel = document.getElementById('compareMonthTriggerLabel');
 const compareMonthDropdown = document.getElementById('compareMonthDropdown');
 const reportTotal = document.getElementById('reportTotal');
+const breakdownWrapper = document.getElementById('breakdownWrapper');
+const breakdownMainLabel = document.getElementById('breakdownMainLabel');
+const breakdownCompareLabel = document.getElementById('breakdownCompareLabel');
 const categoryBreakdown = document.getElementById('categoryBreakdown');
 
 const categoryList = document.getElementById('categoryList');
@@ -1177,31 +1180,14 @@ function renderCompareMonthSelect() {
   compareMonthTriggerLabel.textContent = selectedM ? selectedM.label + (selectedM.id === data.currentMonthId ? ' (current)' : '') : 'None';
 }
 
-// Builds one period's row within a category block: label, amount, and the
-// budget bar (see renderReport for the bar's blue/green/red rules). `max` is
-// the biggest single-category spend in that period, used to scale the bar
-// when the category has no budget set.
-function buildPeriodRowHtml(label, amount, budget, max) {
-  const overBudget = budget > 0 && amount > budget;
-
-  let barHtml;
-  if (budget > 0) {
-    const bluePct = overBudget ? (budget / amount) * 100 : (amount / budget) * 100;
-    const secondClass = overBudget ? 'red' : 'green';
-    barHtml = `<div class="bar-segment blue" style="width:${bluePct}%"></div><div class="bar-segment ${secondClass}" style="width:${100 - bluePct}%"></div>`;
-  } else {
-    barHtml = `<div class="bar-segment neutral" style="width:${max ? (amount / max) * 100 : 0}%"></div>`;
-  }
-
-  return `
-    <div class="breakdown-period">
-      <div class="breakdown-row">
-        <span class="breakdown-period-label">${escapeHtml(label)}</span>
-        <span class="breakdown-amount">${money(amount)}</span>
-      </div>
-      <div class="bar-track">${barHtml}</div>
-    </div>
-  `;
+// Colors a spend amount relative to its category's budget: green at or
+// under budget, amber up to 10% over, red beyond that. No color (default
+// text) when the category has no budget set — there's nothing to compare.
+function budgetColorClass(amount, budget) {
+  if (!budget || budget <= 0) return '';
+  if (amount <= budget) return 'under-budget';
+  if (amount <= budget * 1.1) return 'over-budget-mild';
+  return 'over-budget';
 }
 
 function renderReport() {
@@ -1236,32 +1222,27 @@ function renderReport() {
     }))
     .sort((a, b) => b.amount - a.amount || b.compareAmount - a.compareAmount);
 
+  breakdownWrapper.classList.toggle('no-compare', !compareMonth);
+  breakdownMainLabel.textContent = month.label;
+  breakdownCompareLabel.textContent = compareMonth ? compareMonth.label : '';
+
   categoryBreakdown.innerHTML = '';
   if (!rows.length) {
     categoryBreakdown.innerHTML = '<li class="empty-msg">No spends recorded for this period.</li>';
     return;
   }
 
-  const max = Math.max(...rows.map(r => r.amount));
-  const compareMax = Math.max(...rows.map(r => r.compareAmount));
-
   for (const r of rows) {
     const budget = findCategory(r.id)?.budget || 0;
-
-    let html = `<div class="breakdown-category-name">${escapeHtml(r.name)}</div>`;
-    html += buildPeriodRowHtml(month.label, r.amount, budget, max);
-
-    if (compareMonth) {
-      html += buildPeriodRowHtml(compareMonth.label, r.compareAmount, budget, compareMax);
-      const delta = r.amount - r.compareAmount;
-      const deltaClass = delta > 0 ? 'delta-up' : delta < 0 ? 'delta-down' : 'delta-flat';
-      const sign = delta > 0 ? '+' : '';
-      html += `<div class="breakdown-delta ${deltaClass}">${sign}${money(Math.abs(delta))} change</div>`;
-    }
+    const currentClass = budgetColorClass(r.amount, budget);
 
     const li = document.createElement('li');
     li.className = 'breakdown-item';
-    li.innerHTML = html;
+    li.innerHTML = `
+      <span class="breakdown-cat-name">${escapeHtml(r.name)}</span>
+      <span class="breakdown-cat-amount ${currentClass}">${money(r.amount)}</span>
+      ${compareMonth ? `<span class="breakdown-cat-amount ${budgetColorClass(r.compareAmount, budget)}">${money(r.compareAmount)}</span>` : ''}
+    `;
     categoryBreakdown.appendChild(li);
   }
 }
