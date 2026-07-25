@@ -1,4 +1,4 @@
-const APP_VERSION = 'v1.6';
+const APP_VERSION = 'v1.7';
 
 // ── Storage ───────────────────────────────────────────────────────────────────
 
@@ -672,11 +672,22 @@ function renderReport() {
       const pct = total ? Math.round((r.amount / total) * 100) : 0;
       const budget = findCategory(r.id)?.budget || 0;
       const overBudget = budget > 0 && r.amount > budget;
-      let budgetHtml = '';
+
+      let barHtml, budgetHtml = '';
       if (budget > 0) {
         const remaining = budget - r.amount;
         budgetHtml = `<div class="breakdown-budget ${overBudget ? 'over-budget' : 'under-budget'}">${overBudget ? `Over by ${money(-remaining)}` : `${money(remaining)} left`} of ${money(budget)} budget</div>`;
+
+        // Bar always fills 100%: under budget it's spend (blue) + headroom (green);
+        // over budget it's budget (blue) + the overspend (red) — so the blue portion
+        // always represents "budget" and shrinks as a share once you go over it.
+        const bluePct = overBudget ? (budget / r.amount) * 100 : (r.amount / budget) * 100;
+        const secondClass = overBudget ? 'red' : 'green';
+        barHtml = `<div class="bar-segment blue" style="width:${bluePct}%"></div><div class="bar-segment ${secondClass}" style="width:${100 - bluePct}%"></div>`;
+      } else {
+        barHtml = `<div class="bar-segment neutral" style="width:${max ? (r.amount / max) * 100 : 0}%"></div>`;
       }
+
       const li = document.createElement('li');
       li.className = 'breakdown-item';
       li.innerHTML = `
@@ -684,7 +695,7 @@ function renderReport() {
           <span class="breakdown-name">${escapeHtml(r.name)}</span>
           <span class="breakdown-amount">${money(r.amount)} · ${pct}%</span>
         </div>
-        <div class="bar-track"><div class="bar-fill ${overBudget ? 'over-budget' : ''}" style="width:${max ? (r.amount / max) * 100 : 0}%"></div></div>
+        <div class="bar-track">${barHtml}</div>
         ${budgetHtml}
       `;
       categoryBreakdown.appendChild(li);

@@ -42,8 +42,13 @@ a spend's date can be changed), delete asks for confirmation.
 ### Summary (report view)
 Choose a period (default: current). Shows the category breakdown (amount,
 share of total, and — if the category has a budget — over/under and by how
-much) and compares it against the period immediately before it
-chronologically (per-category delta). Period management lives here too, next
+much). The bar is always full width and two-toned when a category has a
+budget: under budget it's spend (blue) + headroom (green); over budget it's
+budget (blue) + the overspend (red) — so blue always represents "budget" and
+shrinks proportionally once you go over it. No-budget categories keep a
+single-color bar sized relative to the biggest category that period. Also
+compares against the period immediately before it chronologically
+(per-category delta). Period management lives here too, next
 to the picker: rename (pencil icon), delete (bin icon, confirmed), and start
 new (button below, prompts for a name prefilled with today's date). Deleting
 the current period reopens whatever's now last as current; deleting the last

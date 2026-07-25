@@ -6,6 +6,7 @@
   --surface-2: #212e28;
   --accent: #34d399;
   --danger: #ff6b6b;
+  --blue: #4a9eff;
   --text: #eef2f0;
   --muted: #8a9490;
   --radius: 16px;
@@ -386,9 +387,12 @@ input.spend-date-input {
 .breakdown-name { font-weight: 600; }
 .breakdown-amount { font-variant-numeric: tabular-nums; color: var(--muted); }
 
-.bar-track { background: var(--surface); border-radius: 6px; height: 8px; overflow: hidden; }
-.bar-fill { background: var(--accent); height: 100%; border-radius: 6px; }
-.bar-fill.over-budget { background: var(--danger); }
+.bar-track { display: flex; background: var(--surface); border-radius: 6px; height: 8px; overflow: hidden; }
+.bar-segment { height: 100%; }
+.bar-segment.neutral { background: var(--accent); }
+.bar-segment.blue { background: var(--blue); }
+.bar-segment.green { background: var(--accent); }
+.bar-segment.red { background: var(--danger); }
 
 .breakdown-budget { font-size: 0.8rem; margin-top: 4px; }
 .breakdown-budget.under-budget { color: var(--muted); }
