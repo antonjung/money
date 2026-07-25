@@ -70,6 +70,16 @@ editable inline, pencil icon opens Edit spend (category + amount, via
 dropdown-trigger pattern, sourced live from `data.categories`), bin icon
 deletes (confirmed). Shows a "no current period" prompt if there isn't one.
 
+While filtered to one category, a "Reassign to category" button appears
+(hidden when showing "All categories", when the filtered category has no
+spends this period, or when there's no other category to move them to).
+Opens a dialog naming the count and source category, picks a target from a
+dropdown that excludes the source, and `reassignCategory` moves every
+matching spend in the *current period only* in one action — the filter then
+follows the moved spends to the target category, so the result is visible
+immediately. This is the bulk counterpart to Edit spend's one-at-a-time
+category change.
+
 ### Summary (report view)
 Empty state if there are no periods at all (`data.months.length === 0`) —
 otherwise, choose a period (default: current). One `<li>` per category

@@ -1,4 +1,4 @@
-const APP_VERSION = 'v2.2';
+const APP_VERSION = 'v2.3';
 
 // ── Sound ─────────────────────────────────────────────────────────────────────
 
@@ -142,6 +142,23 @@ function updateSpend(monthId, spendId, categoryId, amount) {
   spend.categoryId = categoryId;
   spend.amount = amount;
   saveData();
+}
+
+// Moves every spend in one month from one category to another — used to
+// bulk-reassign a filtered category's spends in List rather than editing
+// them one at a time.
+function reassignCategory(monthId, fromCategoryId, toCategoryId) {
+  const month = data.months.find(m => m.id === monthId);
+  if (!month) return 0;
+  let count = 0;
+  for (const s of month.spends) {
+    if (s.categoryId === fromCategoryId) {
+      s.categoryId = toCategoryId;
+      count++;
+    }
+  }
+  if (count > 0) saveData();
+  return count;
 }
 
 function monthTotal(month) {
@@ -508,7 +525,16 @@ const historyMonthTotal = document.getElementById('historyMonthTotal');
 const historyFilterTrigger = document.getElementById('historyFilterTrigger');
 const historyFilterTriggerLabel = document.getElementById('historyFilterTriggerLabel');
 const historyFilterDropdown = document.getElementById('historyFilterDropdown');
+const reassignCategoryBtn = document.getElementById('reassignCategoryBtn');
 const spendList = document.getElementById('spendList');
+
+const reassignCategoryDialog = document.getElementById('reassignCategoryDialog');
+const reassignCategoryMessage = document.getElementById('reassignCategoryMessage');
+const reassignCategoryTrigger = document.getElementById('reassignCategoryTrigger');
+const reassignCategoryTriggerLabel = document.getElementById('reassignCategoryTriggerLabel');
+const reassignCategoryDropdown = document.getElementById('reassignCategoryDropdown');
+const reassignCategoryCancelBtn = document.getElementById('reassignCategoryCancelBtn');
+const reassignCategoryConfirmBtn = document.getElementById('reassignCategoryConfirmBtn');
 
 const editSpendDialog = document.getElementById('editSpendDialog');
 const editSpendCategoryTrigger = document.getElementById('editSpendCategoryTrigger');
@@ -725,6 +751,7 @@ function renderHistoryView() {
   if (!month) {
     historyMonthLabel.textContent = '';
     historyMonthTotal.textContent = '';
+    reassignCategoryBtn.classList.add('hidden');
     spendList.innerHTML = '<li class="empty-msg">No current period. Set one from the Periods tab.</li>';
     return;
   }
@@ -736,6 +763,8 @@ function renderHistoryView() {
   const filtered = historyFilterCategoryId
     ? month.spends.filter(s => s.categoryId === historyFilterCategoryId)
     : month.spends;
+
+  reassignCategoryBtn.classList.toggle('hidden', !(historyFilterCategoryId && filtered.length > 0 && data.categories.length > 1));
 
   spendList.innerHTML = '';
   if (!filtered.length) {
@@ -776,6 +805,71 @@ function renderHistoryView() {
     spendList.appendChild(li);
   }
 }
+
+// ── Reassign category ─────────────────────────────────────────────────────────
+// Bulk-moves every spend currently shown by the List filter to a different
+// category, in one action — only available while filtered to one category.
+
+let reassignSelectedCategoryId = null;
+
+function closeReassignCategoryDropdown() {
+  reassignCategoryDropdown.classList.add('hidden');
+  reassignCategoryTrigger.classList.remove('open');
+}
+
+function toggleReassignCategoryDropdown() {
+  const isOpen = !reassignCategoryDropdown.classList.contains('hidden');
+  if (isOpen) closeReassignCategoryDropdown();
+  else {
+    reassignCategoryDropdown.classList.remove('hidden');
+    reassignCategoryTrigger.classList.add('open');
+  }
+}
+
+reassignCategoryTrigger.addEventListener('click', toggleReassignCategoryDropdown);
+
+function renderReassignCategoryDropdown() {
+  const sorted = [...data.categories]
+    .filter(c => c.id !== historyFilterCategoryId)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  reassignCategoryDropdown.innerHTML = '';
+  for (const cat of sorted) {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'dropdown-item' + (cat.id === reassignSelectedCategoryId ? ' selected' : '');
+    item.textContent = cat.name;
+    item.addEventListener('click', () => {
+      reassignSelectedCategoryId = cat.id;
+      closeReassignCategoryDropdown();
+      renderReassignCategoryDropdown();
+      reassignCategoryTriggerLabel.textContent = cat.name;
+    });
+    reassignCategoryDropdown.appendChild(item);
+  }
+}
+
+reassignCategoryBtn.addEventListener('click', () => {
+  const month = currentMonth();
+  if (!month || !historyFilterCategoryId) return;
+  const count = month.spends.filter(s => s.categoryId === historyFilterCategoryId).length;
+  const fromCat = findCategory(historyFilterCategoryId);
+  reassignCategoryMessage.textContent = `Move ${count} spend${count === 1 ? '' : 's'} in "${fromCat ? fromCat.name : 'this category'}" to:`;
+  reassignSelectedCategoryId = null;
+  reassignCategoryTriggerLabel.textContent = 'Select category';
+  renderReassignCategoryDropdown();
+  reassignCategoryDialog.showModal();
+});
+
+reassignCategoryCancelBtn.addEventListener('click', () => reassignCategoryDialog.close());
+
+reassignCategoryConfirmBtn.addEventListener('click', () => {
+  const month = currentMonth();
+  if (!month || !historyFilterCategoryId || !reassignSelectedCategoryId) return;
+  reassignCategory(month.id, historyFilterCategoryId, reassignSelectedCategoryId);
+  historyFilterCategoryId = reassignSelectedCategoryId; // follow the moved spends
+  reassignCategoryDialog.close();
+  renderAll();
+});
 
 // ── Edit spend ────────────────────────────────────────────────────────────────
 
