@@ -132,6 +132,12 @@ Pencil icon opens a rename dialog (`renameCategory`) — just updates
 so every spend everywhere picks up the new name automatically; there's
 nothing to cascade or migrate.
 
+A bin icon (`deleteCategory`, confirmed) only appears when `categoryInUse`
+is false — checked across *every* period, not just the current one, since a
+category deleted while in use elsewhere would leave orphaned `categoryId`
+references. Reassign or edit away any spends still using it first (List's
+Edit spend or bulk Reassign) and the icon appears once none remain.
+
 ### Periods
 All period management lives here, replacing what used to be split between a
 "start new period" flow (prefilled with today's date — confusing, since it

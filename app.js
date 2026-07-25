@@ -1,4 +1,4 @@
-const APP_VERSION = 'v2.3';
+const APP_VERSION = 'v2.4';
 
 // ── Sound ─────────────────────────────────────────────────────────────────────
 
@@ -106,6 +106,19 @@ function renameCategory(categoryId, newName) {
   newName = (newName || '').trim();
   if (!newName) return;
   cat.name = newName;
+  saveData();
+}
+
+// True if any spend in any period (not just the current one) references
+// this category — used to only offer deletion when it's actually safe.
+function categoryInUse(categoryId) {
+  return data.months.some(m => m.spends.some(s => s.categoryId === categoryId));
+}
+
+function deleteCategory(categoryId) {
+  const idx = data.categories.findIndex(c => c.id === categoryId);
+  if (idx === -1) return;
+  data.categories.splice(idx, 1);
   saveData();
 }
 
@@ -980,12 +993,14 @@ function renderCategoriesView() {
     return;
   }
   for (const cat of sorted) {
+    const canDelete = !categoryInUse(cat.id);
     const li = document.createElement('li');
     li.innerHTML = `
       <span class="category-name">${escapeHtml(cat.name)}</span>
       <div class="category-row-actions">
         <input type="number" class="category-budget-input" min="0" step="0.01" inputmode="decimal" placeholder="No budget" value="${cat.budget ? cat.budget : ''}">
         <button type="button" class="icon-btn-square rename-category-btn" aria-label="Rename category">${PENCIL_ICON_SVG}</button>
+        ${canDelete ? `<button type="button" class="icon-btn-square danger delete-category-btn" aria-label="Delete category">${BIN_ICON_SVG}</button>` : ''}
       </div>
     `;
     li.querySelector('.category-budget-input').addEventListener('change', e => {
@@ -994,6 +1009,16 @@ function renderCategoriesView() {
       renderCategoriesView();
     });
     li.querySelector('.rename-category-btn').addEventListener('click', () => openRenameCategoryDialog(cat.id));
+    const deleteCategoryBtn = li.querySelector('.delete-category-btn');
+    if (deleteCategoryBtn) {
+      deleteCategoryBtn.addEventListener('click', () => {
+        openConfirm(
+          'Delete category?',
+          `Delete "${cat.name}"? This can't be undone.`,
+          () => { deleteCategory(cat.id); renderAll(); },
+        );
+      });
+    }
     categoryList.appendChild(li);
   }
 }
