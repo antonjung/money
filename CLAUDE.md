@@ -29,9 +29,11 @@ Bottom nav, four screens (icon + label, like the `rehearsal` app):
 
 ### Home (spend view)
 Entry-only — category, amount — nothing else, so it's as fast as possible for
-repeated use. The category picker is an expandable list (trigger button +
-chevron that flips, tap a row to pick and it closes), the same pattern
-`rehearsal` uses for "Download from shared library" — not a native `<select>`.
+repeated use. Blurs the amount field after adding (closes the numeric
+keypad) rather than refocusing it. The category picker is an expandable list
+(trigger button + chevron that flips, tap a row to pick and it closes), the
+same pattern `rehearsal` uses for "Download from shared library" — not a
+native `<select>`; the period picker in Summary uses the identical pattern.
 If there are no categories yet, the form is replaced with a prompt to add one
 (categories are managed on their own screen now, not created inline here).
 

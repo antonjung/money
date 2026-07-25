@@ -232,7 +232,8 @@ input[type="date"] { color-scheme: dark; }
   align-items: center;
   gap: 10px;
 }
-.field-row select { flex: 1; }
+.field-row select, .field-row .dropdown-trigger { flex: 1; }
+.field-row .dropdown-trigger { width: auto; }
 
 .input-row {
   display: flex;

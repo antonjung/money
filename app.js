@@ -1,4 +1,4 @@
-const APP_VERSION = 'v1.7';
+const APP_VERSION = 'v1.8';
 
 // ── Storage ───────────────────────────────────────────────────────────────────
 
@@ -386,7 +386,9 @@ const historyMonthLabel = document.getElementById('historyMonthLabel');
 const historyMonthTotal = document.getElementById('historyMonthTotal');
 const spendList = document.getElementById('spendList');
 
-const monthSelect = document.getElementById('monthSelect');
+const monthTrigger = document.getElementById('monthTrigger');
+const monthTriggerLabel = document.getElementById('monthTriggerLabel');
+const monthDropdown = document.getElementById('monthDropdown');
 const renameMonthBtn = document.getElementById('renameMonthBtn');
 const deleteMonthBtn = document.getElementById('deleteMonthBtn');
 const reportTotal = document.getElementById('reportTotal');
@@ -583,8 +585,8 @@ spendForm.addEventListener('submit', e => {
   addSpend(selectedCategoryId, amount);
 
   amountInput.value = '';
+  amountInput.blur();
   renderMoneyViews();
-  amountInput.focus();
 });
 
 // ── Categories view ───────────────────────────────────────────────────────────
@@ -633,24 +635,50 @@ addCategoryConfirmBtn.addEventListener('click', () => {
 
 // ── Report view ───────────────────────────────────────────────────────────────
 
-function renderMonthSelect() {
-  const prev = monthSelect.value;
-  monthSelect.innerHTML = '';
-  const sorted = [...data.months].sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt));
-  for (const m of sorted) {
-    const opt = document.createElement('option');
-    opt.value = m.id;
-    opt.textContent = m.label + (m.endedAt ? '' : ' (current)');
-    monthSelect.appendChild(opt);
-  }
-  monthSelect.value = sorted.some(m => m.id === prev) ? prev : currentMonth().id;
+let selectedMonthId = null;
+
+function closeMonthDropdown() {
+  monthDropdown.classList.add('hidden');
+  monthTrigger.classList.remove('open');
 }
 
-monthSelect.addEventListener('change', renderReport);
+function toggleMonthDropdown() {
+  const isOpen = !monthDropdown.classList.contains('hidden');
+  if (isOpen) closeMonthDropdown();
+  else {
+    monthDropdown.classList.remove('hidden');
+    monthTrigger.classList.add('open');
+  }
+}
+
+monthTrigger.addEventListener('click', toggleMonthDropdown);
+
+function selectMonth(monthId) {
+  selectedMonthId = monthId;
+  closeMonthDropdown();
+  renderReport();
+}
+
+function renderMonthSelect() {
+  const sorted = [...data.months].sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt));
+  if (!sorted.some(m => m.id === selectedMonthId)) selectedMonthId = currentMonth().id;
+
+  monthDropdown.innerHTML = '';
+  for (const m of sorted) {
+    const label = m.label + (m.endedAt ? '' : ' (current)');
+    if (m.id === selectedMonthId) monthTriggerLabel.textContent = label;
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'dropdown-item' + (m.id === selectedMonthId ? ' selected' : '');
+    item.textContent = label;
+    item.addEventListener('click', () => selectMonth(m.id));
+    monthDropdown.appendChild(item);
+  }
+}
 
 function renderReport() {
   renderMonthSelect();
-  const monthId = monthSelect.value;
+  const monthId = selectedMonthId;
   const idx = data.months.findIndex(m => m.id === monthId);
   const month = data.months[idx];
   const prevMonth = idx > 0 ? data.months[idx - 1] : null;
@@ -757,7 +785,7 @@ startMonthConfirmBtn.addEventListener('click', () => {
 });
 
 renameMonthBtn.addEventListener('click', () => {
-  const month = data.months.find(m => m.id === monthSelect.value);
+  const month = data.months.find(m => m.id === selectedMonthId);
   if (!month) return;
   renameMonthInput.value = month.label;
   renameMonthDialog.showModal();
@@ -767,7 +795,7 @@ renameMonthBtn.addEventListener('click', () => {
 renameMonthCancelBtn.addEventListener('click', () => renameMonthDialog.close());
 
 renameMonthConfirmBtn.addEventListener('click', () => {
-  const month = data.months.find(m => m.id === monthSelect.value);
+  const month = data.months.find(m => m.id === selectedMonthId);
   if (!month) return;
   renameMonth(month.id, renameMonthInput.value);
   renameMonthDialog.close();
@@ -775,7 +803,7 @@ renameMonthConfirmBtn.addEventListener('click', () => {
 });
 
 deleteMonthBtn.addEventListener('click', () => {
-  const month = data.months.find(m => m.id === monthSelect.value);
+  const month = data.months.find(m => m.id === selectedMonthId);
   if (!month) return;
   const count = month.spends.length;
   openConfirm(
