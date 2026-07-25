@@ -11,28 +11,43 @@ Self-contained, no backend — data lives in localStorage on the device.
 `localStorage['money-data']`:
 
 ```
-categories: [{ id, name }]
+categories: [{ id, name, budget }]
 months:     [{ id, label, startedAt, endedAt, spends: [{ id, categoryId, amount, note, at }] }]
 ```
 
-`months` is append-only and chronological; the last entry (`endedAt === null`) is
-the current month. Categories are global and shared across months.
+`at` is a `YYYY-MM-DD` date string (the spend's date, editable — not a created-at
+timestamp). `months` is append-only and chronological; the last entry
+(`endedAt === null`) is the current month. Categories are global and shared
+across months, each with an optional monthly `budget` (0 = none set).
 
 ## Functions
 
+### spend / history / report tabs
+Spend is entry-only (category, amount, date, optional note) — it doesn't list
+anything, so it stays fast to use repeatedly. History shows the current
+month's recorded spends (editable date, delete with confirmation). Report
+covers everything else per-month.
+
 ### start new month
-Archives the current month (sets `endedAt`) and starts a new, empty one.
-Confirmed via dialog since it can't be undone from the UI.
+Prompts for a name (prefilled with today's date, editable) and archives the
+current month (sets `endedAt`) before starting the new one.
+
+### delete month
+From Report, deletes the selected month and its spends (confirmed — this
+can't be undone). Deleting the current month reopens whatever month is now
+last as current; deleting the last remaining month leaves a fresh empty one
+(the app always has at least one month).
 
 ### add spend
-Pick an existing category or add a new one inline, enter an amount (+ optional
-note), record it against the current month. Spends can be deleted individually
-(mis-entries happen).
+Pick an existing category or add a new one inline (budget set separately, via
+the category list in the menu), enter an amount and date (defaults to today,
+changeable both at entry and afterwards in History), optional note.
 
 ### report
-Choose a month (default: current). Shows the category breakdown (amount +
-share of total) and compares it against the month immediately before it
-chronologically (per-category delta).
+Choose a month (default: current). Shows the category breakdown (amount,
+share of total, and — if the category has a budget — over/under and by how
+much) and compares it against the month immediately before it chronologically
+(per-category delta).
 
 ## Group sharing
 

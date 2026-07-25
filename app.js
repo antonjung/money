@@ -1,4 +1,4 @@
-const APP_VERSION = 'v1.1';
+const APP_VERSION = 'v1.2';
 
 // ── Storage ───────────────────────────────────────────────────────────────────
 
@@ -30,6 +30,13 @@ function formatMonthLabel(date) {
   return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+function todayISODate() {
+  const d = new Date();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
 const data = loadData();
 
 function currentMonth() {
@@ -47,16 +54,23 @@ function addCategory(name) {
   if (!name) return null;
   const existing = data.categories.find(c => c.name.toLowerCase() === name.toLowerCase());
   if (existing) return existing;
-  const cat = { id: uid(), name };
+  const cat = { id: uid(), name, budget: 0 };
   data.categories.push(cat);
   saveData();
   return cat;
 }
 
+function setCategoryBudget(categoryId, budget) {
+  const cat = findCategory(categoryId);
+  if (!cat) return;
+  cat.budget = budget;
+  saveData();
+}
+
 // ── Spends ────────────────────────────────────────────────────────────────────
 
-function addSpend(categoryId, amount, note) {
-  currentMonth().spends.push({ id: uid(), categoryId, amount, note: note.trim(), at: new Date().toISOString() });
+function addSpend(categoryId, amount, note, date) {
+  currentMonth().spends.push({ id: uid(), categoryId, amount, note: note.trim(), at: date || todayISODate() });
   saveData();
 }
 
@@ -64,6 +78,15 @@ function deleteSpend(monthId, spendId) {
   const month = data.months.find(m => m.id === monthId);
   if (!month) return;
   month.spends = month.spends.filter(s => s.id !== spendId);
+  saveData();
+}
+
+function updateSpendDate(monthId, spendId, newDate) {
+  const month = data.months.find(m => m.id === monthId);
+  if (!month) return;
+  const spend = month.spends.find(s => s.id === spendId);
+  if (!spend) return;
+  spend.at = newDate;
   saveData();
 }
 
@@ -79,9 +102,22 @@ function categoryTotals(month) {
   return map;
 }
 
-function startNewMonth() {
+function startNewMonth(label) {
   currentMonth().endedAt = new Date().toISOString();
-  data.months.push({ id: uid(), label: formatMonthLabel(new Date()), startedAt: new Date().toISOString(), endedAt: null, spends: [] });
+  label = (label || '').trim();
+  data.months.push({ id: uid(), label: label || formatMonthLabel(new Date()), startedAt: new Date().toISOString(), endedAt: null, spends: [] });
+  saveData();
+}
+
+function deleteMonth(monthId) {
+  const idx = data.months.findIndex(m => m.id === monthId);
+  if (idx === -1) return;
+  data.months.splice(idx, 1);
+  if (!data.months.length) {
+    data.months.push({ id: uid(), label: formatMonthLabel(new Date()), startedAt: new Date().toISOString(), endedAt: null, spends: [] });
+  } else {
+    data.months[data.months.length - 1].endedAt = null; // whatever's now last is the current month
+  }
   saveData();
 }
 
@@ -319,8 +355,11 @@ async function initGroupFromStorage() {
 
 // ── Elements ──────────────────────────────────────────────────────────────────
 
+const BIN_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
+
 const tabs = document.querySelectorAll('.tab');
 const spendView = document.getElementById('spendView');
+const historyView = document.getElementById('historyView');
 const reportView = document.getElementById('reportView');
 
 const currentMonthLabel = document.getElementById('currentMonthLabel');
@@ -329,10 +368,15 @@ const spendForm = document.getElementById('spendForm');
 const categorySelect = document.getElementById('categorySelect');
 const newCategoryInput = document.getElementById('newCategoryInput');
 const amountInput = document.getElementById('amountInput');
+const spendDateInput = document.getElementById('spendDateInput');
 const noteInput = document.getElementById('noteInput');
+
+const historyMonthLabel = document.getElementById('historyMonthLabel');
+const historyMonthTotal = document.getElementById('historyMonthTotal');
 const spendList = document.getElementById('spendList');
 
 const monthSelect = document.getElementById('monthSelect');
+const deleteMonthBtn = document.getElementById('deleteMonthBtn');
 const reportTotal = document.getElementById('reportTotal');
 const categoryBreakdown = document.getElementById('categoryBreakdown');
 const comparisonList = document.getElementById('comparisonList');
@@ -348,10 +392,38 @@ const groupPinInput = document.getElementById('groupPinInput');
 const joinGroupBtn = document.getElementById('joinGroupBtn');
 const leaveGroupBtn = document.getElementById('leaveGroupBtn');
 
+const startMonthDialog = document.getElementById('startMonthDialog');
+const startMonthMessage = document.getElementById('startMonthMessage');
+const newMonthNameInput = document.getElementById('newMonthNameInput');
+const startMonthCancelBtn = document.getElementById('startMonthCancelBtn');
+const startMonthConfirmBtn = document.getElementById('startMonthConfirmBtn');
+
 const confirmDialog = document.getElementById('confirmDialog');
+const confirmTitle = document.getElementById('confirmTitle');
 const confirmMessage = document.getElementById('confirmMessage');
 const confirmCancelBtn = document.getElementById('confirmCancelBtn');
 const confirmOkBtn = document.getElementById('confirmOkBtn');
+
+let pendingConfirmAction = null;
+
+function openConfirm(title, message, action) {
+  confirmTitle.textContent = title;
+  confirmMessage.textContent = message;
+  pendingConfirmAction = action;
+  confirmDialog.showModal();
+}
+
+confirmCancelBtn.addEventListener('click', () => {
+  pendingConfirmAction = null;
+  confirmDialog.close();
+});
+
+confirmOkBtn.addEventListener('click', () => {
+  const action = pendingConfirmAction;
+  pendingConfirmAction = null;
+  confirmDialog.close();
+  if (action) action();
+});
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
@@ -361,7 +433,9 @@ tabs.forEach(tab => {
     tab.classList.add('active');
     const view = tab.dataset.view;
     spendView.classList.toggle('hidden', view !== 'spend');
+    historyView.classList.toggle('hidden', view !== 'history');
     reportView.classList.toggle('hidden', view !== 'report');
+    if (view === 'history') renderHistoryView();
     if (view === 'report') renderReport();
   });
 });
@@ -399,17 +473,23 @@ function toggleNewCategoryInput() {
 
 categorySelect.addEventListener('change', toggleNewCategoryInput);
 
-function renderSpendView() {
+function renderCurrentMonthBanner() {
   const month = currentMonth();
   currentMonthLabel.textContent = month.label;
   currentMonthTotal.textContent = money(monthTotal(month));
+}
+
+function renderHistoryView() {
+  const month = currentMonth();
+  historyMonthLabel.textContent = month.label;
+  historyMonthTotal.textContent = money(monthTotal(month));
 
   spendList.innerHTML = '';
   if (!month.spends.length) {
     spendList.innerHTML = '<li class="empty-msg">No spends recorded yet this month.</li>';
     return;
   }
-  const sorted = [...month.spends].sort((a, b) => new Date(b.at) - new Date(a.at));
+  const sorted = [...month.spends].sort((a, b) => b.at.localeCompare(a.at) || b.id.localeCompare(a.id));
   for (const s of sorted) {
     const cat = findCategory(s.categoryId);
     const li = document.createElement('li');
@@ -417,17 +497,33 @@ function renderSpendView() {
     li.innerHTML = `
       <div class="spend-main">
         <div class="spend-category">${escapeHtml(cat ? cat.name : 'Unknown')}</div>
-        ${s.note ? `<div class="spend-note">${escapeHtml(s.note)}</div>` : ''}
+        <div class="spend-meta">
+          <input type="date" class="spend-date-input" value="${s.at.slice(0, 10)}">
+          ${s.note ? `<span class="spend-note">· ${escapeHtml(s.note)}</span>` : ''}
+        </div>
       </div>
       <div class="spend-amount">${money(s.amount)}</div>
-      <button class="spend-delete" aria-label="Delete">✕</button>
+      <button class="spend-delete" aria-label="Delete">${BIN_ICON_SVG}</button>
     `;
+    li.querySelector('.spend-date-input').addEventListener('change', e => {
+      updateSpendDate(month.id, s.id, e.target.value || todayISODate());
+      renderHistoryView();
+    });
     li.querySelector('.spend-delete').addEventListener('click', () => {
-      deleteSpend(month.id, s.id);
-      renderSpendView();
+      openConfirm(
+        'Delete spend?',
+        `Delete this ${money(s.amount)} spend${cat ? ' in ' + cat.name : ''}? This can't be undone.`,
+        () => { deleteSpend(month.id, s.id); renderAll(); },
+      );
     });
     spendList.appendChild(li);
   }
+}
+
+function renderMoneyViews() {
+  renderCurrentMonthBanner();
+  renderHistoryView();
+  if (!reportView.classList.contains('hidden')) renderReport();
 }
 
 function escapeHtml(str) {
@@ -449,15 +545,16 @@ spendForm.addEventListener('submit', e => {
   const amount = parseFloat(amountInput.value);
   if (!amount || amount <= 0) { amountInput.focus(); return; }
 
-  addSpend(categoryId, amount, noteInput.value);
+  addSpend(categoryId, amount, noteInput.value, spendDateInput.value);
 
   amountInput.value = '';
   noteInput.value = '';
   newCategoryInput.value = '';
+  spendDateInput.value = todayISODate();
   renderCategorySelect();
   categorySelect.value = categoryId;
   toggleNewCategoryInput();
-  renderSpendView();
+  renderMoneyViews();
   amountInput.focus();
 });
 
@@ -500,6 +597,13 @@ function renderReport() {
     const max = Math.max(...rows.map(r => r.amount));
     for (const r of rows) {
       const pct = total ? Math.round((r.amount / total) * 100) : 0;
+      const budget = findCategory(r.id)?.budget || 0;
+      const overBudget = budget > 0 && r.amount > budget;
+      let budgetHtml = '';
+      if (budget > 0) {
+        const remaining = budget - r.amount;
+        budgetHtml = `<div class="breakdown-budget ${overBudget ? 'over-budget' : 'under-budget'}">${overBudget ? `Over by ${money(-remaining)}` : `${money(remaining)} left`} of ${money(budget)} budget</div>`;
+      }
       const li = document.createElement('li');
       li.className = 'breakdown-item';
       li.innerHTML = `
@@ -507,7 +611,8 @@ function renderReport() {
           <span class="breakdown-name">${escapeHtml(r.name)}</span>
           <span class="breakdown-amount">${money(r.amount)} · ${pct}%</span>
         </div>
-        <div class="bar-track"><div class="bar-fill" style="width:${max ? (r.amount / max) * 100 : 0}%"></div></div>
+        <div class="bar-track"><div class="bar-fill ${overBudget ? 'over-budget' : ''}" style="width:${max ? (r.amount / max) * 100 : 0}%"></div></div>
+        ${budgetHtml}
       `;
       categoryBreakdown.appendChild(li);
     }
@@ -546,12 +651,11 @@ function renderReport() {
   }
 }
 
-// ── Menu / start new month ────────────────────────────────────────────────────
+// ── Menu / start new month / delete month ─────────────────────────────────────
 
 function renderAll() {
   renderCategorySelect();
-  renderSpendView();
-  if (!reportView.classList.contains('hidden')) renderReport();
+  renderMoneyViews();
 }
 
 menuBtn.addEventListener('click', () => {
@@ -563,7 +667,14 @@ menuBtn.addEventListener('click', () => {
   } else {
     for (const cat of sorted) {
       const li = document.createElement('li');
-      li.textContent = cat.name;
+      li.innerHTML = `
+        <span class="category-name">${escapeHtml(cat.name)}</span>
+        <input type="number" class="category-budget-input" min="0" step="0.01" inputmode="decimal" placeholder="No budget" value="${cat.budget ? cat.budget : ''}">
+      `;
+      li.querySelector('.category-budget-input').addEventListener('change', e => {
+        const val = parseFloat(e.target.value);
+        setCategoryBudget(cat.id, !val || val < 0 ? 0 : val);
+      });
       categoryListMenu.appendChild(li);
     }
   }
@@ -574,17 +685,29 @@ menuBtn.addEventListener('click', () => {
 closeMenuBtn.addEventListener('click', () => menuDialog.close());
 
 startMonthBtn.addEventListener('click', () => {
-  confirmMessage.textContent = `This archives "${currentMonth().label}" and begins a new month. Past months stay available in Report.`;
+  startMonthMessage.textContent = `This archives "${currentMonth().label}" and begins a new month. Past months stay available in Report.`;
+  newMonthNameInput.value = formatMonthLabel(new Date());
   menuDialog.close();
-  confirmDialog.showModal();
+  startMonthDialog.showModal();
 });
 
-confirmCancelBtn.addEventListener('click', () => confirmDialog.close());
+startMonthCancelBtn.addEventListener('click', () => startMonthDialog.close());
 
-confirmOkBtn.addEventListener('click', () => {
-  startNewMonth();
-  confirmDialog.close();
+startMonthConfirmBtn.addEventListener('click', () => {
+  startNewMonth(newMonthNameInput.value);
+  startMonthDialog.close();
   renderAll();
+});
+
+deleteMonthBtn.addEventListener('click', () => {
+  const month = data.months.find(m => m.id === monthSelect.value);
+  if (!month) return;
+  const count = month.spends.length;
+  openConfirm(
+    'Delete month?',
+    `Delete "${month.label}" and its ${count} spend${count === 1 ? '' : 's'}? This can't be undone.`,
+    () => { deleteMonth(month.id); renderAll(); },
+  );
 });
 
 joinGroupBtn.addEventListener('click', () => {
@@ -645,6 +768,7 @@ dismissUpdateBtn.addEventListener('click', () => updateBanner.classList.add('hid
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 document.getElementById('version').textContent = APP_VERSION;
+spendDateInput.value = todayISODate();
 renderCategorySelect();
-renderSpendView();
+renderMoneyViews();
 initGroupFromStorage();

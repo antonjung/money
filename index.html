@@ -25,6 +25,7 @@
 
     <nav class="tabs">
       <button class="tab active" data-view="spend">Spend</button>
+      <button class="tab" data-view="history">History</button>
       <button class="tab" data-view="report">Report</button>
     </nav>
 
@@ -49,11 +50,22 @@
             </div>
           </div>
           <div class="field">
+            <label for="spendDateInput">Date</label>
+            <input id="spendDateInput" type="date">
+          </div>
+          <div class="field">
             <label for="noteInput">Note (optional)</label>
             <input id="noteInput" type="text" placeholder="e.g. Tesco" autocomplete="off">
           </div>
           <button type="submit" class="btn btn-primary">Add spend</button>
         </form>
+      </section>
+
+      <section id="historyView" class="view hidden">
+        <div class="month-banner">
+          <span id="historyMonthLabel"></span>
+          <span id="historyMonthTotal"></span>
+        </div>
 
         <ul id="spendList" class="spend-list"></ul>
       </section>
@@ -61,7 +73,12 @@
       <section id="reportView" class="view hidden">
         <div class="field">
           <label for="monthSelect">Month</label>
-          <select id="monthSelect"></select>
+          <div class="field-row">
+            <select id="monthSelect"></select>
+            <button id="deleteMonthBtn" class="icon-btn-danger" aria-label="Delete month" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+            </button>
+          </div>
         </div>
 
         <div id="reportTotal" class="report-total"></div>
@@ -96,13 +113,28 @@
     </div>
   </dialog>
 
+  <dialog id="startMonthDialog">
+    <div class="dialog-content">
+      <h2>Start new month</h2>
+      <p id="startMonthMessage" class="muted"></p>
+      <div class="field">
+        <label for="newMonthNameInput">Month name</label>
+        <input id="newMonthNameInput" type="text">
+      </div>
+      <div class="dialog-actions">
+        <button id="startMonthCancelBtn" class="btn btn-ghost">Cancel</button>
+        <button id="startMonthConfirmBtn" class="btn btn-danger">Start month</button>
+      </div>
+    </div>
+  </dialog>
+
   <dialog id="confirmDialog">
     <div class="dialog-content">
-      <h2>Start new month?</h2>
+      <h2 id="confirmTitle">Are you sure?</h2>
       <p id="confirmMessage" class="muted"></p>
       <div class="dialog-actions">
         <button id="confirmCancelBtn" class="btn btn-ghost">Cancel</button>
-        <button id="confirmOkBtn" class="btn btn-danger">Start new month</button>
+        <button id="confirmOkBtn" class="btn btn-danger">Confirm</button>
       </div>
     </div>
   </dialog>
