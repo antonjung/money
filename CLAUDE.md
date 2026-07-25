@@ -105,3 +105,9 @@ confirmation still applies if the device already has local data.
 deploy. Bumping `CACHE` is what makes the browser notice `sw.js` changed,
 which triggers the "new version available" banner (see `sw.js` comments) —
 the banner offers a reload rather than forcing one.
+
+Every version bump also gets an annotated git tag (`vX.Y`, matching
+`APP_VERSION`) pushed alongside the commit, and the latest one gets a GitHub
+Release — so the version is visible directly on GitHub (Tags list, and the
+Releases card on the repo homepage) without having to open a commit and read
+`app.js`.
