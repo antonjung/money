@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <title>Money</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f1512">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Money">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="header-row">
+        <h1>Money</h1>
+        <button id="menuBtn" class="icon-btn" aria-label="Menu">⋯</button>
+      </div>
+      <div id="version"></div>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab active" data-view="spend">Spend</button>
+      <button class="tab" data-view="report">Report</button>
+    </nav>
+
+    <main>
+      <section id="spendView" class="view">
+        <div class="month-banner">
+          <span id="currentMonthLabel"></span>
+          <span id="currentMonthTotal"></span>
+        </div>
+
+        <form id="spendForm">
+          <div class="field">
+            <label for="categorySelect">Category</label>
+            <select id="categorySelect"></select>
+            <input id="newCategoryInput" class="hidden" type="text" placeholder="New category name" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="amountInput">Amount</label>
+            <div class="input-row">
+              <span class="unit">£</span>
+              <input id="amountInput" type="number" step="0.01" min="0.01" inputmode="decimal" placeholder="0.00">
+            </div>
+          </div>
+          <div class="field">
+            <label for="noteInput">Note (optional)</label>
+            <input id="noteInput" type="text" placeholder="e.g. Tesco" autocomplete="off">
+          </div>
+          <button type="submit" class="btn btn-primary">Add spend</button>
+        </form>
+
+        <ul id="spendList" class="spend-list"></ul>
+      </section>
+
+      <section id="reportView" class="view hidden">
+        <div class="field">
+          <label for="monthSelect">Month</label>
+          <select id="monthSelect"></select>
+        </div>
+
+        <div id="reportTotal" class="report-total"></div>
+        <ul id="categoryBreakdown" class="breakdown-list"></ul>
+
+        <h2 class="section-title">Vs previous month</h2>
+        <ul id="comparisonList" class="comparison-list"></ul>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="menuDialog">
+    <div class="dialog-content">
+      <h2>Menu</h2>
+      <p class="muted">Current month: <span id="menuCurrentLabel"></span></p>
+      <button id="startMonthBtn" class="btn btn-secondary">Start new month</button>
+
+      <h3>Categories</h3>
+      <ul id="categoryListMenu" class="category-list"></ul>
+
+      <button id="closeMenuBtn" class="btn btn-ghost">Close</button>
+    </div>
+  </dialog>
+
+  <dialog id="confirmDialog">
+    <div class="dialog-content">
+      <h2>Start new month?</h2>
+      <p id="confirmMessage" class="muted"></p>
+      <div class="dialog-actions">
+        <button id="confirmCancelBtn" class="btn btn-ghost">Cancel</button>
+        <button id="confirmOkBtn" class="btn btn-danger">Start new month</button>
+      </div>
+    </div>
+  </dialog>
+
+  <div id="updateBanner" class="hidden">
+    <span id="updateBannerText">New version available</span>
+    <button id="reloadBtn">Reload</button>
+    <button id="dismissUpdateBtn" aria-label="Dismiss">✕</button>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
