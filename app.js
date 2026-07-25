@@ -1,4 +1,4 @@
-const APP_VERSION = 'v1.8';
+const APP_VERSION = 'v1.9';
 
 // ── Storage ───────────────────────────────────────────────────────────────────
 
@@ -389,6 +389,9 @@ const spendList = document.getElementById('spendList');
 const monthTrigger = document.getElementById('monthTrigger');
 const monthTriggerLabel = document.getElementById('monthTriggerLabel');
 const monthDropdown = document.getElementById('monthDropdown');
+const compareMonthTrigger = document.getElementById('compareMonthTrigger');
+const compareMonthTriggerLabel = document.getElementById('compareMonthTriggerLabel');
+const compareMonthDropdown = document.getElementById('compareMonthDropdown');
 const renameMonthBtn = document.getElementById('renameMonthBtn');
 const deleteMonthBtn = document.getElementById('deleteMonthBtn');
 const reportTotal = document.getElementById('reportTotal');
@@ -676,12 +679,69 @@ function renderMonthSelect() {
   }
 }
 
+let selectedCompareMonthId = null;
+
+function closeCompareMonthDropdown() {
+  compareMonthDropdown.classList.add('hidden');
+  compareMonthTrigger.classList.remove('open');
+}
+
+function toggleCompareMonthDropdown() {
+  const isOpen = !compareMonthDropdown.classList.contains('hidden');
+  if (isOpen) closeCompareMonthDropdown();
+  else {
+    compareMonthDropdown.classList.remove('hidden');
+    compareMonthTrigger.classList.add('open');
+  }
+}
+
+compareMonthTrigger.addEventListener('click', toggleCompareMonthDropdown);
+
+function selectCompareMonth(monthId) {
+  selectedCompareMonthId = monthId;
+  closeCompareMonthDropdown();
+  renderReport();
+}
+
+// Defaults the comparison to whatever period immediately precedes the main
+// one chronologically — same as the old automatic behaviour — but only
+// when there's no valid explicit choice already (so switching the main
+// period doesn't clobber a comparison the user picked on purpose).
+function defaultCompareMonthId(mainMonthId) {
+  const idx = data.months.findIndex(m => m.id === mainMonthId);
+  return idx > 0 ? data.months[idx - 1].id : null;
+}
+
+function renderCompareMonthSelect() {
+  const sorted = [...data.months].sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt));
+  const options = sorted.filter(m => m.id !== selectedMonthId);
+  if (!options.some(m => m.id === selectedCompareMonthId)) {
+    selectedCompareMonthId = defaultCompareMonthId(selectedMonthId);
+  }
+
+  compareMonthDropdown.innerHTML = '';
+  if (!options.length) {
+    compareMonthTriggerLabel.textContent = 'No other periods';
+    return;
+  }
+  compareMonthTriggerLabel.textContent = 'Select period';
+  for (const m of options) {
+    const label = m.label + (m.endedAt ? '' : ' (current)');
+    if (m.id === selectedCompareMonthId) compareMonthTriggerLabel.textContent = label;
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'dropdown-item' + (m.id === selectedCompareMonthId ? ' selected' : '');
+    item.textContent = label;
+    item.addEventListener('click', () => selectCompareMonth(m.id));
+    compareMonthDropdown.appendChild(item);
+  }
+}
+
 function renderReport() {
   renderMonthSelect();
-  const monthId = selectedMonthId;
-  const idx = data.months.findIndex(m => m.id === monthId);
-  const month = data.months[idx];
-  const prevMonth = idx > 0 ? data.months[idx - 1] : null;
+  renderCompareMonthSelect();
+  const month = data.months.find(m => m.id === selectedMonthId);
+  const compareMonth = selectedCompareMonthId ? data.months.find(m => m.id === selectedCompareMonthId) : null;
 
   const total = monthTotal(month);
   reportTotal.textContent = money(total);
@@ -731,23 +791,23 @@ function renderReport() {
   }
 
   comparisonList.innerHTML = '';
-  if (!prevMonth) {
-    comparisonList.innerHTML = '<li class="empty-msg">No previous period to compare.</li>';
+  if (!compareMonth) {
+    comparisonList.innerHTML = '<li class="empty-msg">No other period to compare.</li>';
     return;
   }
-  const prevTotals = categoryTotals(prevMonth);
-  const ids = new Set([...totals.keys(), ...prevTotals.keys()]);
+  const compareTotals = categoryTotals(compareMonth);
+  const ids = new Set([...totals.keys(), ...compareTotals.keys()]);
   const compareRows = [...ids]
     .map(id => ({
       id,
       name: findCategory(id)?.name || 'Unknown',
       cur: totals.get(id) || 0,
-      prev: prevTotals.get(id) || 0,
+      compare: compareTotals.get(id) || 0,
     }))
     .sort((a, b) => b.cur - a.cur);
 
   for (const r of compareRows) {
-    const delta = r.cur - r.prev;
+    const delta = r.cur - r.compare;
     const deltaClass = delta > 0 ? 'delta-up' : delta < 0 ? 'delta-down' : 'delta-flat';
     const sign = delta > 0 ? '+' : '';
     const li = document.createElement('li');
@@ -755,7 +815,7 @@ function renderReport() {
     li.innerHTML = `
       <div>
         <div class="comparison-name">${escapeHtml(r.name)}</div>
-        <div class="comparison-prev">${money(r.prev)} → ${money(r.cur)}</div>
+        <div class="comparison-prev">${money(r.compare)} → ${money(r.cur)}</div>
       </div>
       <div class="comparison-delta ${deltaClass}">${sign}${money(Math.abs(delta))}</div>
     `;

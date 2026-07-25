@@ -84,12 +84,21 @@
           <div id="monthDropdown" class="dropdown-list hidden"></div>
         </div>
 
+        <div class="field">
+          <label>Compare with</label>
+          <button type="button" id="compareMonthTrigger" class="dropdown-trigger">
+            <span id="compareMonthTriggerLabel">Select period</span>
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div id="compareMonthDropdown" class="dropdown-list hidden"></div>
+        </div>
+
         <button id="startMonthBtn" class="btn btn-secondary">Start new period</button>
 
         <div id="reportTotal" class="report-total"></div>
         <ul id="categoryBreakdown" class="breakdown-list"></ul>
 
-        <h2 class="section-title">Vs previous period</h2>
+        <h2 class="section-title">Comparison</h2>
         <ul id="comparisonList" class="comparison-list"></ul>
       </section>
 

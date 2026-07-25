@@ -48,9 +48,16 @@ much). The bar is always full width and two-toned when a category has a
 budget: under budget it's spend (blue) + headroom (green); over budget it's
 budget (blue) + the overspend (red) — so blue always represents "budget" and
 shrinks proportionally once you go over it. No-budget categories keep a
-single-color bar sized relative to the biggest category that period. Also
-compares against the period immediately before it chronologically
-(per-category delta). Period management lives here too, next
+single-color bar sized relative to the biggest category that period.
+
+A second picker ("Compare with") sets which period the per-category
+comparison list is against — defaults to whatever's immediately before the
+main period chronologically, same as before, but the user can pick any other
+period instead. Its list excludes the main period (comparing a period to
+itself isn't useful) and only resets to the default when the current choice
+becomes invalid (main period changed to match it, or it no longer exists) —
+switching the main period otherwise keeps an explicit comparison choice.
+Period management lives here too, next
 to the picker: rename (pencil icon), delete (bin icon, confirmed), and start
 new (button below, prompts for a name prefilled with today's date). Deleting
 the current period reopens whatever's now last as current; deleting the last
