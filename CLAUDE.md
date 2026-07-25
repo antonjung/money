@@ -102,31 +102,35 @@ August is current for spend entry.
 
 ### Categories
 Add a category (name + optional monthly budget together, one step) and edit
-any category's budget inline. This is the only way to create a category —
-there's no quick-add from Home, to keep that form from doing two jobs at once.
-Shows the combined budget total across all categories above the list when
-any category has one set.
+any category's budget inline — the total re-renders on every budget change
+(`renderCategoriesView` re-runs after `setCategoryBudget`, not just once on
+open), so it can't go stale while you're editing. This is the only way to
+create a category — there's no quick-add from Home, to keep that form from
+doing two jobs at once. Shows the combined budget total across all
+categories above the list when any category has one set.
 
 ### Periods
 All period management lives here, replacing what used to be split between a
 "start new period" flow (prefilled with today's date — confusing, since it
-looked meaningful but wasn't) and Summary's rename/delete icons:
+looked meaningful but wasn't) and Summary's rename/delete icons. Each row is
+a single compact line: name (+ "Current" badge) and total spend on the left,
+icon actions on the right — no `.btn-link` text button, every action here is
+a small icon (`.icon-btn-square`, 16px glyph in ~8px padding) so the list
+stays tight even with three actions per row:
 
 - **Add** (`addPeriod`): name only, no date-based default — forces picking an
   actual meaningful name. Doesn't switch to it (see Make current) *unless*
   it's the very first period ever, which becomes current automatically since
   otherwise there'd be no way to add a spend without an extra manual step.
-- **Make current** (`setCurrentMonth`): shown on every period except the
-  current one. This is the only thing that changes what Home adds to —
-  entirely decoupled from creation order or which period Summary happens to
-  be viewing.
+- **Make current** (check-circle icon, `setCurrentMonth`): shown on every
+  period except the current one. This is the only thing that changes what
+  Home adds to — entirely decoupled from creation order or which period
+  Summary happens to be viewing.
 - **Rename** (pencil icon) and **delete** (bin icon, confirmed) — reuse the
   same dialog/confirm patterns as everywhere else. Deleting the current
   period falls back `currentMonthId` to whatever period was created most
   recently, if any; deleting the last remaining period leaves `currentMonthId`
   null (same as a fresh install — zero periods is fine).
-- Each row shows the period's total spend and a "Current" badge if it's the
-  active one.
 
 ## Group sharing
 

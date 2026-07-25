@@ -1,4 +1,4 @@
-const APP_VERSION = 'v2.0';
+const APP_VERSION = 'v2.1';
 
 // ── Sound ─────────────────────────────────────────────────────────────────────
 
@@ -460,6 +460,7 @@ async function joinGroupFromUrl() {
 
 const BIN_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
 const PENCIL_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
+const CHECK_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg>';
 
 const tabs = document.querySelectorAll('.nav-tab');
 const spendView = document.getElementById('spendView');
@@ -734,6 +735,7 @@ function renderCategoriesView() {
     li.querySelector('.category-budget-input').addEventListener('change', e => {
       const val = parseFloat(e.target.value);
       setCategoryBudget(cat.id, !val || val < 0 ? 0 : val);
+      renderCategoriesView();
     });
     categoryList.appendChild(li);
   }
@@ -989,11 +991,9 @@ function renderPeriodsView() {
         <div class="period-total">${money(monthTotal(m))} spent</div>
       </div>
       <div class="period-actions">
-        ${!isCurrent ? `<button type="button" class="btn-link make-current-btn">Make current</button>` : ''}
-        <div class="period-icon-actions">
-          <button type="button" class="icon-btn-square rename-period-btn" aria-label="Rename period">${PENCIL_ICON_SVG}</button>
-          <button type="button" class="icon-btn-square danger delete-period-btn" aria-label="Delete period">${BIN_ICON_SVG}</button>
-        </div>
+        ${!isCurrent ? `<button type="button" class="icon-btn-square make-current-btn" aria-label="Make current">${CHECK_ICON_SVG}</button>` : ''}
+        <button type="button" class="icon-btn-square rename-period-btn" aria-label="Rename period">${PENCIL_ICON_SVG}</button>
+        <button type="button" class="icon-btn-square danger delete-period-btn" aria-label="Delete period">${BIN_ICON_SVG}</button>
       </div>
     `;
     const makeCurrentBtn = li.querySelector('.make-current-btn');
