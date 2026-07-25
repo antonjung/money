@@ -30,7 +30,7 @@ html, body {
   padding: 0 20px calc(76px + env(safe-area-inset-bottom));
 }
 
-header { padding: 24px 0 8px; }
+header { padding: calc(36px + env(safe-area-inset-top)) 0 8px; }
 
 .header-row {
   display: flex;

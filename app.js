@@ -1,4 +1,4 @@
-const APP_VERSION = 'v1.9';
+const APP_VERSION = 'v1.10';
 
 // ── Storage ───────────────────────────────────────────────────────────────────
 
@@ -248,14 +248,41 @@ function setGroupStatus(text, cls) {
 function updateGroupUI() {
   const joinForm = document.getElementById('groupJoinForm');
   const leaveBtn = document.getElementById('leaveGroupBtn');
+  const inviteBtn = document.getElementById('inviteGroupBtn');
   if (activeGroup) {
     joinForm.classList.add('hidden');
     leaveBtn.classList.remove('hidden');
+    inviteBtn.classList.remove('hidden');
     setGroupStatus(`Shared as "${activeGroup.name}"`, 'active');
   } else {
     joinForm.classList.remove('hidden');
     leaveBtn.classList.add('hidden');
+    inviteBtn.classList.add('hidden');
     setGroupStatus('Not shared — data stays on this device.');
+  }
+}
+
+function buildInviteUrl() {
+  return `${location.origin}${location.pathname}#group=${encodeURIComponent(activeGroup.name)}&pin=${encodeURIComponent(activeGroup.pin)}`;
+}
+
+async function inviteToGroup() {
+  if (!activeGroup) return;
+  const url = buildInviteUrl();
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'Money', text: `Join "${activeGroup.name}" on Money`, url });
+    } catch {
+      // User cancelled the share sheet, or sharing isn't actually supported despite the
+      // feature check — either way they've already seen a native UI, so no fallback here.
+    }
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    setGroupStatus('Invite link copied to clipboard.', 'active');
+  } catch {
+    setGroupStatus('Could not copy the invite link.', 'error');
   }
 }
 
@@ -362,6 +389,17 @@ async function initGroupFromStorage() {
   await joinGroup(saved.name, saved.pin, { silent: true });
 }
 
+// Picks up group + PIN from an invite link, e.g. .../#group=X&pin=Y (see
+// buildInviteUrl/inviteToGroup). Returns whether it found and used one, so
+// init can skip the normal silent reconnect in that case.
+async function joinGroupFromUrl() {
+  const match = location.hash.match(/^#group=([^&]+)&pin=([^&]+)$/);
+  if (!match) return false;
+  history.replaceState(null, '', location.pathname + location.search);
+  await joinGroup(decodeURIComponent(match[1]), decodeURIComponent(match[2]));
+  return true;
+}
+
 // ── Elements ──────────────────────────────────────────────────────────────────
 
 const BIN_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
@@ -412,6 +450,7 @@ const closeShareBtn = document.getElementById('closeShareBtn');
 const groupNameInput = document.getElementById('groupNameInput');
 const groupPinInput = document.getElementById('groupPinInput');
 const joinGroupBtn = document.getElementById('joinGroupBtn');
+const inviteGroupBtn = document.getElementById('inviteGroupBtn');
 const leaveGroupBtn = document.getElementById('leaveGroupBtn');
 
 const startMonthBtn = document.getElementById('startMonthBtn');
@@ -886,6 +925,10 @@ joinGroupBtn.addEventListener('click', () => {
   joinGroup(groupNameInput.value, groupPinInput.value);
 });
 
+inviteGroupBtn.addEventListener('click', () => {
+  inviteToGroup();
+});
+
 leaveGroupBtn.addEventListener('click', () => {
   leaveGroup();
 });
@@ -942,4 +985,6 @@ dismissUpdateBtn.addEventListener('click', () => updateBanner.classList.add('hid
 document.getElementById('version').textContent = APP_VERSION;
 renderCategorySelect();
 renderMoneyViews();
-initGroupFromStorage();
+joinGroupFromUrl().then(joinedFromUrl => {
+  if (!joinedFromUrl) initGroupFromStorage();
+});

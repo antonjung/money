@@ -79,6 +79,15 @@ menu any more — period management moved to Summary, sharing is its own
 button, since a catch-all menu for two unrelated things was the whole
 problem.)
 
+Once in a group, "Invite others" (`inviteToGroup` in app.js) builds a link
+with the group name + PIN in the URL hash (`#group=X&pin=Y`, matching
+rehearsal's `#org=X&pin=Y` invite pattern) and hands it to `navigator.share`
+if available, otherwise copies it to the clipboard. Opening that link
+(`joinGroupFromUrl`, checked before the normal silent reconnect on load)
+strips the hash and joins that group automatically — same `joinGroup` path
+as typing it in manually, so the existing "replace this device's data?"
+confirmation still applies if the device already has local data.
+
 - `groups/{sha256(normalized name)}` — one document per group, whole-state
   (categories + months), last-write-wins.
 - Content is AES-GCM encrypted with a key derived (PBKDF2, 100k iterations,
