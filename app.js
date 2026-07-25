@@ -1,4 +1,4 @@
-const APP_VERSION = 'v1.4';
+const APP_VERSION = 'v1.5';
 
 // ── Storage ───────────────────────────────────────────────────────────────────
 
@@ -106,6 +106,15 @@ function startNewMonth(label) {
   currentMonth().endedAt = new Date().toISOString();
   label = (label || '').trim();
   data.months.push({ id: uid(), label: label || formatMonthLabel(new Date()), startedAt: new Date().toISOString(), endedAt: null, spends: [] });
+  saveData();
+}
+
+function renameMonth(monthId, newLabel) {
+  const month = data.months.find(m => m.id === monthId);
+  if (!month) return;
+  newLabel = (newLabel || '').trim();
+  if (!newLabel) return;
+  month.label = newLabel;
   saveData();
 }
 
@@ -378,6 +387,7 @@ const historyMonthTotal = document.getElementById('historyMonthTotal');
 const spendList = document.getElementById('spendList');
 
 const monthSelect = document.getElementById('monthSelect');
+const renameMonthBtn = document.getElementById('renameMonthBtn');
 const deleteMonthBtn = document.getElementById('deleteMonthBtn');
 const reportTotal = document.getElementById('reportTotal');
 const categoryBreakdown = document.getElementById('categoryBreakdown');
@@ -391,21 +401,25 @@ const newCategoryBudgetInput = document.getElementById('newCategoryBudgetInput')
 const addCategoryCancelBtn = document.getElementById('addCategoryCancelBtn');
 const addCategoryConfirmBtn = document.getElementById('addCategoryConfirmBtn');
 
-const menuBtn = document.getElementById('menuBtn');
-const menuDialog = document.getElementById('menuDialog');
-const menuCurrentLabel = document.getElementById('menuCurrentLabel');
-const startMonthBtn = document.getElementById('startMonthBtn');
-const closeMenuBtn = document.getElementById('closeMenuBtn');
+const shareBtn = document.getElementById('shareBtn');
+const shareDialog = document.getElementById('shareDialog');
+const closeShareBtn = document.getElementById('closeShareBtn');
 const groupNameInput = document.getElementById('groupNameInput');
 const groupPinInput = document.getElementById('groupPinInput');
 const joinGroupBtn = document.getElementById('joinGroupBtn');
 const leaveGroupBtn = document.getElementById('leaveGroupBtn');
 
+const startMonthBtn = document.getElementById('startMonthBtn');
 const startMonthDialog = document.getElementById('startMonthDialog');
 const startMonthMessage = document.getElementById('startMonthMessage');
 const newMonthNameInput = document.getElementById('newMonthNameInput');
 const startMonthCancelBtn = document.getElementById('startMonthCancelBtn');
 const startMonthConfirmBtn = document.getElementById('startMonthConfirmBtn');
+
+const renameMonthDialog = document.getElementById('renameMonthDialog');
+const renameMonthInput = document.getElementById('renameMonthInput');
+const renameMonthCancelBtn = document.getElementById('renameMonthCancelBtn');
+const renameMonthConfirmBtn = document.getElementById('renameMonthConfirmBtn');
 
 const confirmDialog = document.getElementById('confirmDialog');
 const confirmTitle = document.getElementById('confirmTitle');
@@ -685,25 +699,16 @@ function renderReport() {
   }
 }
 
-// ── Menu / start new month / delete month ─────────────────────────────────────
+// ── Start / rename / delete period ────────────────────────────────────────────
 
 function renderAll() {
   renderCategorySelect();
   renderMoneyViews();
 }
 
-menuBtn.addEventListener('click', () => {
-  menuCurrentLabel.textContent = currentMonth().label;
-  updateGroupUI();
-  menuDialog.showModal();
-});
-
-closeMenuBtn.addEventListener('click', () => menuDialog.close());
-
 startMonthBtn.addEventListener('click', () => {
-  startMonthMessage.textContent = `This archives "${currentMonth().label}" and begins a new period. Past periods stay available in Report.`;
+  startMonthMessage.textContent = `This archives "${currentMonth().label}" and begins a new period. Past periods stay available in Summary.`;
   newMonthNameInput.value = formatMonthLabel(new Date());
-  menuDialog.close();
   startMonthDialog.showModal();
 });
 
@@ -712,6 +717,24 @@ startMonthCancelBtn.addEventListener('click', () => startMonthDialog.close());
 startMonthConfirmBtn.addEventListener('click', () => {
   startNewMonth(newMonthNameInput.value);
   startMonthDialog.close();
+  renderAll();
+});
+
+renameMonthBtn.addEventListener('click', () => {
+  const month = data.months.find(m => m.id === monthSelect.value);
+  if (!month) return;
+  renameMonthInput.value = month.label;
+  renameMonthDialog.showModal();
+  renameMonthInput.focus();
+});
+
+renameMonthCancelBtn.addEventListener('click', () => renameMonthDialog.close());
+
+renameMonthConfirmBtn.addEventListener('click', () => {
+  const month = data.months.find(m => m.id === monthSelect.value);
+  if (!month) return;
+  renameMonth(month.id, renameMonthInput.value);
+  renameMonthDialog.close();
   renderAll();
 });
 
@@ -725,6 +748,15 @@ deleteMonthBtn.addEventListener('click', () => {
     () => { deleteMonth(month.id); renderAll(); },
   );
 });
+
+// ── Sharing ───────────────────────────────────────────────────────────────────
+
+shareBtn.addEventListener('click', () => {
+  updateGroupUI();
+  shareDialog.showModal();
+});
+
+closeShareBtn.addEventListener('click', () => shareDialog.close());
 
 joinGroupBtn.addEventListener('click', () => {
   joinGroup(groupNameInput.value, groupPinInput.value);

@@ -38,12 +38,11 @@ for confirmation.
 Choose a period (default: current). Shows the category breakdown (amount,
 share of total, and — if the category has a budget — over/under and by how
 much) and compares it against the period immediately before it
-chronologically (per-category delta). Starting/deleting a period both live
-here: start prompts for a name (prefilled with today's date, editable) and
-archives the current one; delete removes the selected period and its spends
-(confirmed — can't be undone). Deleting the current period reopens whatever's
-now last as current; deleting the last one leaves a fresh empty period (the
-app always has at least one).
+chronologically (per-category delta). Period management lives here too, next
+to the picker: rename (pencil icon), delete (bin icon, confirmed), and start
+new (button below, prompts for a name prefilled with today's date). Deleting
+the current period reopens whatever's now last as current; deleting the last
+one leaves a fresh empty period (the app always has at least one).
 
 ### Categories
 Add a category (name + optional monthly budget together, one step) and edit
@@ -52,10 +51,14 @@ there's no quick-add from Home, to keep that form from doing two jobs at once.
 
 ## Group sharing
 
-Set a group name + PIN in the menu to share data live with anyone using the
-same pair (across devices/users) via Firestore, project `money-app-antonjung`
+The header icon (share glyph, top right) opens the Sharing dialog — set a
+group name + PIN there to share data live with anyone using the same pair
+(across devices/users) via Firestore, project `money-app-antonjung`
 (dedicated to this app, matching the rest of the GitHub.io suite). Optional —
-the app works fully offline until a group is set.
+the app works fully offline until a group is set. (There's no general "..."
+menu any more — period management moved to Summary, sharing is its own
+button, since a catch-all menu for two unrelated things was the whole
+problem.)
 
 - `groups/{sha256(normalized name)}` — one document per group, whole-state
   (categories + months), last-write-wins.

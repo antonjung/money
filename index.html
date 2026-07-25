@@ -18,7 +18,9 @@
     <header>
       <div class="header-row">
         <h1>Money</h1>
-        <button id="menuBtn" class="icon-btn" aria-label="Menu">⋯</button>
+        <button id="shareBtn" class="icon-btn" aria-label="Sharing">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        </button>
       </div>
       <div id="version"></div>
     </header>
@@ -73,11 +75,16 @@
           <label for="monthSelect">Period</label>
           <div class="field-row">
             <select id="monthSelect"></select>
-            <button id="deleteMonthBtn" class="icon-btn-danger" aria-label="Delete period" type="button">
+            <button id="renameMonthBtn" class="icon-btn-square" aria-label="Rename period" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            </button>
+            <button id="deleteMonthBtn" class="icon-btn-square danger" aria-label="Delete period" type="button">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
             </button>
           </div>
         </div>
+
+        <button id="startMonthBtn" class="btn btn-secondary">Start new period</button>
 
         <div id="reportTotal" class="report-total"></div>
         <ul id="categoryBreakdown" class="breakdown-list"></ul>
@@ -112,13 +119,9 @@
     </nav>
   </div>
 
-  <dialog id="menuDialog">
+  <dialog id="shareDialog">
     <div class="dialog-content">
-      <h2>Menu</h2>
-      <p class="muted">Current period: <span id="menuCurrentLabel"></span></p>
-      <button id="startMonthBtn" class="btn btn-secondary">Start new period</button>
-
-      <h3>Sharing</h3>
+      <h2>Sharing</h2>
       <div id="groupStatus" class="group-status"></div>
       <div id="groupJoinForm">
         <input id="groupNameInput" type="text" placeholder="Group name" autocomplete="off">
@@ -128,7 +131,21 @@
       </div>
       <button id="leaveGroupBtn" class="btn btn-ghost hidden">Leave group</button>
 
-      <button id="closeMenuBtn" class="btn btn-ghost">Close</button>
+      <button id="closeShareBtn" class="btn btn-ghost">Close</button>
+    </div>
+  </dialog>
+
+  <dialog id="renameMonthDialog">
+    <div class="dialog-content">
+      <h2>Rename period</h2>
+      <div class="field">
+        <label for="renameMonthInput">Period name</label>
+        <input id="renameMonthInput" type="text">
+      </div>
+      <div class="dialog-actions">
+        <button id="renameMonthCancelBtn" class="btn btn-ghost">Cancel</button>
+        <button id="renameMonthConfirmBtn" class="btn btn-primary">Save</button>
+      </div>
     </div>
   </dialog>
 
