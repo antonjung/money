@@ -39,8 +39,12 @@
 
         <form id="spendForm">
           <div class="field">
-            <label for="categorySelect">Category</label>
-            <select id="categorySelect"></select>
+            <label>Category</label>
+            <button type="button" id="categoryTrigger" class="dropdown-trigger">
+              <span id="categoryTriggerLabel">Select category</span>
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div id="categoryDropdown" class="dropdown-list hidden"></div>
           </div>
           <div class="field">
             <label for="amountInput">Amount</label>
@@ -48,14 +52,6 @@
               <span class="unit">£</span>
               <input id="amountInput" type="number" step="0.01" min="0.01" inputmode="decimal" placeholder="0.00">
             </div>
-          </div>
-          <div class="field">
-            <label for="spendDateInput">Date</label>
-            <input id="spendDateInput" type="date">
-          </div>
-          <div class="field">
-            <label for="noteInput">Note (optional)</label>
-            <input id="noteInput" type="text" placeholder="e.g. Tesco" autocomplete="off">
           </div>
           <button type="submit" class="btn btn-primary">Add spend</button>
         </form>

@@ -15,24 +15,29 @@ categories: [{ id, name, budget }]
 months:     [{ id, label, startedAt, endedAt, spends: [{ id, categoryId, amount, note, at }] }]
 ```
 
-`at` is a `YYYY-MM-DD` date string (the spend's date, editable — not a created-at
-timestamp). `months` is append-only and chronological; the last entry
-(`endedAt === null`) is the current month. Categories are global and shared
-across months, each with an optional monthly `budget` (0 = none set).
+`at` is a `YYYY-MM-DD` date string, always today's date at creation — not
+edited at entry, only afterwards (see List below). `note` is always stored
+empty for new spends (the field was removed from entry — kept in the schema
+only so any pre-existing notes still display in List). `months` is
+append-only and chronological; the last entry (`endedAt === null`) is the
+current month. Categories are global and shared across months, each with an
+optional monthly `budget` (0 = none set).
 
 ## Functions
 
 Bottom nav, four screens (icon + label, like the `rehearsal` app):
 
 ### Home (spend view)
-Entry-only — category, amount, date (defaults to today, editable), optional
-note — no list, so it stays fast to use repeatedly. If there are no
-categories yet, the form is replaced with a prompt to add one (categories are
-managed on their own screen now, not created inline here).
+Entry-only — category, amount — nothing else, so it's as fast as possible for
+repeated use. The category picker is an expandable list (trigger button +
+chevron that flips, tap a row to pick and it closes), the same pattern
+`rehearsal` uses for "Download from shared library" — not a native `<select>`.
+If there are no categories yet, the form is replaced with a prompt to add one
+(categories are managed on their own screen now, not created inline here).
 
 ### List (history view)
-The current period's recorded spends: date is editable inline, delete asks
-for confirmation.
+The current period's recorded spends: date is editable inline (the only place
+a spend's date can be changed), delete asks for confirmation.
 
 ### Summary (report view)
 Choose a period (default: current). Shows the category breakdown (amount,

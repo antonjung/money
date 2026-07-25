@@ -1,4 +1,4 @@
-const APP_VERSION = 'v1.5';
+const APP_VERSION = 'v1.6';
 
 // ── Storage ───────────────────────────────────────────────────────────────────
 
@@ -69,8 +69,8 @@ function setCategoryBudget(categoryId, budget) {
 
 // ── Spends ────────────────────────────────────────────────────────────────────
 
-function addSpend(categoryId, amount, note, date) {
-  currentMonth().spends.push({ id: uid(), categoryId, amount, note: note.trim(), at: date || todayISODate() });
+function addSpend(categoryId, amount) {
+  currentMonth().spends.push({ id: uid(), categoryId, amount, note: '', at: todayISODate() });
   saveData();
 }
 
@@ -377,10 +377,10 @@ const currentMonthTotal = document.getElementById('currentMonthTotal');
 const noCategoriesMsg = document.getElementById('noCategoriesMsg');
 const emptyAddCategoryBtn = document.getElementById('emptyAddCategoryBtn');
 const spendForm = document.getElementById('spendForm');
-const categorySelect = document.getElementById('categorySelect');
+const categoryTrigger = document.getElementById('categoryTrigger');
+const categoryTriggerLabel = document.getElementById('categoryTriggerLabel');
+const categoryDropdown = document.getElementById('categoryDropdown');
 const amountInput = document.getElementById('amountInput');
-const spendDateInput = document.getElementById('spendDateInput');
-const noteInput = document.getElementById('noteInput');
 
 const historyMonthLabel = document.getElementById('historyMonthLabel');
 const historyMonthTotal = document.getElementById('historyMonthTotal');
@@ -467,17 +467,46 @@ tabs.forEach(tab => {
 
 // ── Spend view ────────────────────────────────────────────────────────────────
 
-function renderCategorySelect() {
-  const prev = categorySelect.value;
-  categorySelect.innerHTML = '';
-  const sorted = [...data.categories].sort((a, b) => a.name.localeCompare(b.name));
-  for (const cat of sorted) {
-    const opt = document.createElement('option');
-    opt.value = cat.id;
-    opt.textContent = cat.name;
-    categorySelect.appendChild(opt);
+let selectedCategoryId = null;
+
+function closeCategoryDropdown() {
+  categoryDropdown.classList.add('hidden');
+  categoryTrigger.classList.remove('open');
+}
+
+function toggleCategoryDropdown() {
+  const isOpen = !categoryDropdown.classList.contains('hidden');
+  if (isOpen) closeCategoryDropdown();
+  else {
+    categoryDropdown.classList.remove('hidden');
+    categoryTrigger.classList.add('open');
   }
-  if (sorted.some(c => c.id === prev)) categorySelect.value = prev;
+}
+
+categoryTrigger.addEventListener('click', toggleCategoryDropdown);
+
+function selectCategory(catId) {
+  selectedCategoryId = catId;
+  closeCategoryDropdown();
+  renderCategorySelect();
+}
+
+function renderCategorySelect() {
+  const sorted = [...data.categories].sort((a, b) => a.name.localeCompare(b.name));
+  if (!sorted.some(c => c.id === selectedCategoryId)) {
+    selectedCategoryId = sorted.length ? sorted[0].id : null;
+  }
+  categoryTriggerLabel.textContent = selectedCategoryId ? findCategory(selectedCategoryId).name : 'Select category';
+
+  categoryDropdown.innerHTML = '';
+  for (const cat of sorted) {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'dropdown-item' + (cat.id === selectedCategoryId ? ' selected' : '');
+    item.textContent = cat.name;
+    item.addEventListener('click', () => selectCategory(cat.id));
+    categoryDropdown.appendChild(item);
+  }
 
   const hasCategories = sorted.length > 0;
   noCategoriesMsg.classList.toggle('hidden', hasCategories);
@@ -546,18 +575,14 @@ function escapeHtml(str) {
 
 spendForm.addEventListener('submit', e => {
   e.preventDefault();
-  const categoryId = categorySelect.value;
-  if (!categoryId) return;
+  if (!selectedCategoryId) return;
 
   const amount = parseFloat(amountInput.value);
   if (!amount || amount <= 0) { amountInput.focus(); return; }
 
-  addSpend(categoryId, amount, noteInput.value, spendDateInput.value);
+  addSpend(selectedCategoryId, amount);
 
   amountInput.value = '';
-  noteInput.value = '';
-  spendDateInput.value = todayISODate();
-  categorySelect.value = categoryId;
   renderMoneyViews();
   amountInput.focus();
 });
@@ -816,7 +841,6 @@ dismissUpdateBtn.addEventListener('click', () => updateBanner.classList.add('hid
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 document.getElementById('version').textContent = APP_VERSION;
-spendDateInput.value = todayISODate();
 renderCategorySelect();
 renderMoneyViews();
 initGroupFromStorage();
