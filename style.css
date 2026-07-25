@@ -469,6 +469,13 @@ dialog::backdrop { background: rgba(0,0,0,0.5); }
 .category-list li:last-child { border-bottom: none; }
 .category-list .empty-msg { padding: 8px 0; }
 
+.budget-total {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: -4px 0 14px;
+}
+.budget-total strong { color: var(--text); font-variant-numeric: tabular-nums; }
+
 input.category-budget-input {
   width: 90px;
   background: var(--surface);
@@ -481,6 +488,53 @@ input.category-budget-input {
   font-family: inherit;
 }
 input.category-budget-input:focus { border-color: var(--accent); outline: none; }
+
+.period-list { list-style: none; }
+.period-item {
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.period-item:last-child { border-bottom: none; }
+
+.period-info { margin-bottom: 10px; }
+.period-name { font-weight: 600; font-size: 0.95rem; }
+.period-total { color: var(--muted); font-size: 0.85rem; margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+.period-actions {
+  display: flex;
+  align-items: center;
+}
+
+.period-icon-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.current-badge {
+  display: inline-block;
+  background: rgba(52,211,153,0.15);
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 6px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
 
 /* Update banner */
 #updateBanner {

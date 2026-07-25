@@ -32,6 +32,11 @@
           <span id="currentMonthTotal"></span>
         </div>
 
+        <div id="noPeriodMsg" class="empty-state hidden">
+          <p class="muted">No current period.</p>
+          <button id="goToPeriodsBtn" class="btn btn-secondary" type="button">Go to Periods</button>
+        </div>
+
         <div id="noCategoriesMsg" class="empty-state hidden">
           <p class="muted">No categories yet.</p>
           <button id="emptyAddCategoryBtn" class="btn btn-secondary" type="button">+ Add category</button>
@@ -67,41 +72,44 @@
       </section>
 
       <section id="reportView" class="view hidden">
-        <div class="field">
-          <label>Period</label>
-          <div class="field-row">
+        <div id="noPeriodsMsg" class="empty-state hidden">
+          <p class="muted">No periods yet.</p>
+          <button id="reportGoToPeriodsBtn" class="btn btn-secondary" type="button">Go to Periods</button>
+        </div>
+
+        <div id="reportContent">
+          <div class="field">
+            <label>Period</label>
             <button type="button" id="monthTrigger" class="dropdown-trigger">
               <span id="monthTriggerLabel">Select period</span>
               <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
-            <button id="renameMonthBtn" class="icon-btn-square" aria-label="Rename period" type="button">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-            </button>
-            <button id="deleteMonthBtn" class="icon-btn-square danger" aria-label="Delete period" type="button">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-            </button>
+            <div id="monthDropdown" class="dropdown-list hidden"></div>
           </div>
-          <div id="monthDropdown" class="dropdown-list hidden"></div>
+
+          <div class="field">
+            <label>Compare with</label>
+            <button type="button" id="compareMonthTrigger" class="dropdown-trigger">
+              <span id="compareMonthTriggerLabel">Select period</span>
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div id="compareMonthDropdown" class="dropdown-list hidden"></div>
+          </div>
+
+          <div id="reportTotal" class="report-total"></div>
+          <ul id="categoryBreakdown" class="breakdown-list"></ul>
         </div>
-
-        <div class="field">
-          <label>Compare with</label>
-          <button type="button" id="compareMonthTrigger" class="dropdown-trigger">
-            <span id="compareMonthTriggerLabel">Select period</span>
-            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <div id="compareMonthDropdown" class="dropdown-list hidden"></div>
-        </div>
-
-        <button id="startMonthBtn" class="btn btn-secondary">Start new period</button>
-
-        <div id="reportTotal" class="report-total"></div>
-        <ul id="categoryBreakdown" class="breakdown-list"></ul>
       </section>
 
       <section id="categoriesView" class="view hidden">
         <button id="addCategoryBtn" class="btn btn-primary" type="button">+ Add category</button>
+        <div id="categoryBudgetTotal" class="budget-total hidden"></div>
         <ul id="categoryList" class="category-list"></ul>
+      </section>
+
+      <section id="periodsView" class="view hidden">
+        <button id="addPeriodBtn" class="btn btn-primary" type="button">+ Add period</button>
+        <ul id="periodList" class="period-list"></ul>
       </section>
     </main>
 
@@ -121,6 +129,10 @@
       <button class="nav-tab" data-view="categories">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41L13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
         <span>Categories</span>
+      </button>
+      <button class="nav-tab" data-view="periods">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span>Periods</span>
       </button>
     </nav>
   </div>
@@ -156,17 +168,16 @@
     </div>
   </dialog>
 
-  <dialog id="startMonthDialog">
+  <dialog id="addPeriodDialog">
     <div class="dialog-content">
-      <h2>Start new period</h2>
-      <p id="startMonthMessage" class="muted"></p>
+      <h2>Add period</h2>
       <div class="field">
-        <label for="newMonthNameInput">Period name</label>
-        <input id="newMonthNameInput" type="text">
+        <label for="newPeriodNameInput">Name</label>
+        <input id="newPeriodNameInput" type="text" placeholder="e.g. July, Household Aug, Kitchen reno" autocomplete="off">
       </div>
       <div class="dialog-actions">
-        <button id="startMonthCancelBtn" class="btn btn-ghost">Cancel</button>
-        <button id="startMonthConfirmBtn" class="btn btn-danger">Start period</button>
+        <button id="addPeriodCancelBtn" class="btn btn-ghost">Cancel</button>
+        <button id="addPeriodConfirmBtn" class="btn btn-primary">Add period</button>
       </div>
     </div>
   </dialog>

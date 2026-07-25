@@ -1,4 +1,4 @@
-const APP_VERSION = 'v1.16';
+const APP_VERSION = 'v2.0';
 
 // ── Sound ─────────────────────────────────────────────────────────────────────
 
@@ -39,11 +39,14 @@ const GROUP_STORAGE_KEY = 'money-group';
 function loadData() {
   let data = null;
   try { data = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch {}
-  if (!data || !Array.isArray(data.months) || !data.months.length) {
-    data = {
-      categories: [],
-      months: [{ id: uid(), label: formatMonthLabel(new Date()), startedAt: new Date().toISOString(), endedAt: null, spends: [] }],
-    };
+  if (!data || !Array.isArray(data.months)) {
+    data = { categories: [], months: [], currentMonthId: null };
+  }
+  // Migrate data saved before currentMonthId existed: the old convention was
+  // "current = the one with no endedAt, or failing that the last one".
+  if (data.currentMonthId === undefined) {
+    const legacyOpen = data.months.find(m => m.endedAt === null) || data.months[data.months.length - 1];
+    data.currentMonthId = legacyOpen ? legacyOpen.id : null;
   }
   return data;
 }
@@ -57,10 +60,6 @@ function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
-function formatMonthLabel(date) {
-  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
 function todayISODate() {
   const d = new Date();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -71,7 +70,7 @@ function todayISODate() {
 const data = loadData();
 
 function currentMonth() {
-  return data.months[data.months.length - 1];
+  return data.months.find(m => m.id === data.currentMonthId) || null;
 }
 
 // ── Categories ────────────────────────────────────────────────────────────────
@@ -101,7 +100,9 @@ function setCategoryBudget(categoryId, budget) {
 // ── Spends ────────────────────────────────────────────────────────────────────
 
 function addSpend(categoryId, amount) {
-  currentMonth().spends.push({ id: uid(), categoryId, amount, note: '', at: todayISODate() });
+  const month = currentMonth();
+  if (!month) return;
+  month.spends.push({ id: uid(), categoryId, amount, note: '', at: todayISODate() });
   saveData();
 }
 
@@ -133,10 +134,22 @@ function categoryTotals(month) {
   return map;
 }
 
-function startNewMonth(label) {
-  currentMonth().endedAt = new Date().toISOString();
+// Creates a period but doesn't switch to it (see setCurrentMonth) — except
+// the very first period ever, which becomes current automatically since
+// there'd otherwise be no way to add a spend without an extra manual step.
+function addPeriod(label) {
   label = (label || '').trim();
-  data.months.push({ id: uid(), label: label || formatMonthLabel(new Date()), startedAt: new Date().toISOString(), endedAt: null, spends: [] });
+  if (!label) return null;
+  const month = { id: uid(), label, startedAt: new Date().toISOString(), spends: [] };
+  data.months.push(month);
+  if (!data.currentMonthId) data.currentMonthId = month.id;
+  saveData();
+  return month;
+}
+
+function setCurrentMonth(monthId) {
+  if (!data.months.some(m => m.id === monthId)) return;
+  data.currentMonthId = monthId;
   saveData();
 }
 
@@ -153,10 +166,10 @@ function deleteMonth(monthId) {
   const idx = data.months.findIndex(m => m.id === monthId);
   if (idx === -1) return;
   data.months.splice(idx, 1);
-  if (!data.months.length) {
-    data.months.push({ id: uid(), label: formatMonthLabel(new Date()), startedAt: new Date().toISOString(), endedAt: null, spends: [] });
-  } else {
-    data.months[data.months.length - 1].endedAt = null; // whatever's now last is the current month
+  if (data.currentMonthId === monthId) {
+    // Fall back to whatever period was created most recently, if any — the
+    // app is fine with zero periods (same as a fresh install).
+    data.currentMonthId = data.months.length ? data.months[data.months.length - 1].id : null;
   }
   saveData();
 }
@@ -267,7 +280,7 @@ let applyingRemote = false;
 let lastGroupSignature = null;
 
 function dataSignature() {
-  return JSON.stringify({ categories: data.categories, months: data.months });
+  return JSON.stringify({ categories: data.categories, months: data.months, currentMonthId: data.currentMonthId });
 }
 
 function setGroupStatus(text, cls) {
@@ -320,7 +333,7 @@ async function inviteToGroup() {
 async function pushGroupData() {
   if (!activeGroup) return;
   const sig = dataSignature();
-  const payload = { v: 1, categories: data.categories, months: data.months };
+  const payload = { v: 1, categories: data.categories, months: data.months, currentMonthId: data.currentMonthId };
   const enc = await encryptForGroup(payload, activeGroup.key);
   lastGroupSignature = sig;
   await activeGroup.ref.set({ ciphertext: enc.ciphertext, iv: enc.iv, v: 1, updatedAt: Date.now() });
@@ -332,12 +345,13 @@ function maybeSyncToGroup() {
 }
 
 function applyIncomingGroupDoc(decoded) {
-  const sig = JSON.stringify({ categories: decoded.categories, months: decoded.months });
+  const sig = JSON.stringify({ categories: decoded.categories, months: decoded.months, currentMonthId: decoded.currentMonthId });
   if (sig === lastGroupSignature) return; // our own write echoing back
   lastGroupSignature = sig;
   applyingRemote = true;
   data.categories = decoded.categories || [];
   data.months = decoded.months && decoded.months.length ? decoded.months : data.months;
+  data.currentMonthId = decoded.currentMonthId !== undefined ? decoded.currentMonthId : data.currentMonthId;
   saveData();
   applyingRemote = false;
   renderAll();
@@ -396,6 +410,7 @@ async function joinGroup(name, pin, { silent = false } = {}) {
       }
       data.categories = decoded.categories || [];
       data.months = decoded.months && decoded.months.length ? decoded.months : data.months;
+      data.currentMonthId = decoded.currentMonthId !== undefined ? decoded.currentMonthId : data.currentMonthId;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       lastGroupSignature = dataSignature();
     }
@@ -444,15 +459,19 @@ async function joinGroupFromUrl() {
 // ── Elements ──────────────────────────────────────────────────────────────────
 
 const BIN_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
+const PENCIL_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
 
 const tabs = document.querySelectorAll('.nav-tab');
 const spendView = document.getElementById('spendView');
 const historyView = document.getElementById('historyView');
 const reportView = document.getElementById('reportView');
 const categoriesView = document.getElementById('categoriesView');
+const periodsView = document.getElementById('periodsView');
 
 const currentMonthLabel = document.getElementById('currentMonthLabel');
 const currentMonthTotal = document.getElementById('currentMonthTotal');
+const noPeriodMsg = document.getElementById('noPeriodMsg');
+const goToPeriodsBtn = document.getElementById('goToPeriodsBtn');
 const noCategoriesMsg = document.getElementById('noCategoriesMsg');
 const emptyAddCategoryBtn = document.getElementById('emptyAddCategoryBtn');
 const spendForm = document.getElementById('spendForm');
@@ -465,24 +484,38 @@ const historyMonthLabel = document.getElementById('historyMonthLabel');
 const historyMonthTotal = document.getElementById('historyMonthTotal');
 const spendList = document.getElementById('spendList');
 
+const noPeriodsMsg = document.getElementById('noPeriodsMsg');
+const reportGoToPeriodsBtn = document.getElementById('reportGoToPeriodsBtn');
+const reportContent = document.getElementById('reportContent');
 const monthTrigger = document.getElementById('monthTrigger');
 const monthTriggerLabel = document.getElementById('monthTriggerLabel');
 const monthDropdown = document.getElementById('monthDropdown');
 const compareMonthTrigger = document.getElementById('compareMonthTrigger');
 const compareMonthTriggerLabel = document.getElementById('compareMonthTriggerLabel');
 const compareMonthDropdown = document.getElementById('compareMonthDropdown');
-const renameMonthBtn = document.getElementById('renameMonthBtn');
-const deleteMonthBtn = document.getElementById('deleteMonthBtn');
 const reportTotal = document.getElementById('reportTotal');
 const categoryBreakdown = document.getElementById('categoryBreakdown');
 
 const categoryList = document.getElementById('categoryList');
+const categoryBudgetTotal = document.getElementById('categoryBudgetTotal');
 const addCategoryBtn = document.getElementById('addCategoryBtn');
 const addCategoryDialog = document.getElementById('addCategoryDialog');
 const newCategoryNameInput = document.getElementById('newCategoryNameInput');
 const newCategoryBudgetInput = document.getElementById('newCategoryBudgetInput');
 const addCategoryCancelBtn = document.getElementById('addCategoryCancelBtn');
 const addCategoryConfirmBtn = document.getElementById('addCategoryConfirmBtn');
+
+const periodList = document.getElementById('periodList');
+const addPeriodBtn = document.getElementById('addPeriodBtn');
+const addPeriodDialog = document.getElementById('addPeriodDialog');
+const newPeriodNameInput = document.getElementById('newPeriodNameInput');
+const addPeriodCancelBtn = document.getElementById('addPeriodCancelBtn');
+const addPeriodConfirmBtn = document.getElementById('addPeriodConfirmBtn');
+
+const renameMonthDialog = document.getElementById('renameMonthDialog');
+const renameMonthInput = document.getElementById('renameMonthInput');
+const renameMonthCancelBtn = document.getElementById('renameMonthCancelBtn');
+const renameMonthConfirmBtn = document.getElementById('renameMonthConfirmBtn');
 
 const shareBtn = document.getElementById('shareBtn');
 const shareDialog = document.getElementById('shareDialog');
@@ -492,18 +525,6 @@ const groupPinInput = document.getElementById('groupPinInput');
 const joinGroupBtn = document.getElementById('joinGroupBtn');
 const inviteGroupBtn = document.getElementById('inviteGroupBtn');
 const leaveGroupBtn = document.getElementById('leaveGroupBtn');
-
-const startMonthBtn = document.getElementById('startMonthBtn');
-const startMonthDialog = document.getElementById('startMonthDialog');
-const startMonthMessage = document.getElementById('startMonthMessage');
-const newMonthNameInput = document.getElementById('newMonthNameInput');
-const startMonthCancelBtn = document.getElementById('startMonthCancelBtn');
-const startMonthConfirmBtn = document.getElementById('startMonthConfirmBtn');
-
-const renameMonthDialog = document.getElementById('renameMonthDialog');
-const renameMonthInput = document.getElementById('renameMonthInput');
-const renameMonthCancelBtn = document.getElementById('renameMonthCancelBtn');
-const renameMonthConfirmBtn = document.getElementById('renameMonthConfirmBtn');
 
 const confirmDialog = document.getElementById('confirmDialog');
 const confirmTitle = document.getElementById('confirmTitle');
@@ -534,20 +555,25 @@ confirmOkBtn.addEventListener('click', () => {
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
+function switchToView(view) {
+  tabs.forEach(t => t.classList.toggle('active', t.dataset.view === view));
+  spendView.classList.toggle('hidden', view !== 'spend');
+  historyView.classList.toggle('hidden', view !== 'history');
+  reportView.classList.toggle('hidden', view !== 'report');
+  categoriesView.classList.toggle('hidden', view !== 'categories');
+  periodsView.classList.toggle('hidden', view !== 'periods');
+  if (view === 'history') renderHistoryView();
+  if (view === 'report') renderReport();
+  if (view === 'categories') renderCategoriesView();
+  if (view === 'periods') renderPeriodsView();
+}
+
 tabs.forEach(tab => {
-  tab.addEventListener('click', () => {
-    tabs.forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    const view = tab.dataset.view;
-    spendView.classList.toggle('hidden', view !== 'spend');
-    historyView.classList.toggle('hidden', view !== 'history');
-    reportView.classList.toggle('hidden', view !== 'report');
-    categoriesView.classList.toggle('hidden', view !== 'categories');
-    if (view === 'history') renderHistoryView();
-    if (view === 'report') renderReport();
-    if (view === 'categories') renderCategoriesView();
-  });
+  tab.addEventListener('click', () => switchToView(tab.dataset.view));
 });
+
+goToPeriodsBtn.addEventListener('click', () => switchToView('periods'));
+reportGoToPeriodsBtn.addEventListener('click', () => switchToView('periods'));
 
 // ── Spend view ────────────────────────────────────────────────────────────────
 
@@ -592,19 +618,29 @@ function renderCategorySelect() {
     categoryDropdown.appendChild(item);
   }
 
+  // A missing period is the more fundamental blocker — if there's no current
+  // period, that message takes priority over the categories one.
+  const hasPeriod = !!currentMonth();
   const hasCategories = sorted.length > 0;
-  noCategoriesMsg.classList.toggle('hidden', hasCategories);
-  spendForm.classList.toggle('hidden', !hasCategories);
+  noPeriodMsg.classList.toggle('hidden', hasPeriod);
+  noCategoriesMsg.classList.toggle('hidden', !hasPeriod || hasCategories);
+  spendForm.classList.toggle('hidden', !hasPeriod || !hasCategories);
 }
 
 function renderCurrentMonthBanner() {
   const month = currentMonth();
-  currentMonthLabel.textContent = month.label;
-  currentMonthTotal.textContent = money(monthTotal(month));
+  currentMonthLabel.textContent = month ? month.label : '';
+  currentMonthTotal.textContent = month ? money(monthTotal(month)) : '';
 }
 
 function renderHistoryView() {
   const month = currentMonth();
+  if (!month) {
+    historyMonthLabel.textContent = '';
+    historyMonthTotal.textContent = '';
+    spendList.innerHTML = '<li class="empty-msg">No current period. Set one from the Periods tab.</li>';
+    return;
+  }
   historyMonthLabel.textContent = month.label;
   historyMonthTotal.textContent = money(monthTotal(month));
 
@@ -649,6 +685,7 @@ function renderMoneyViews() {
   renderHistoryView();
   if (!reportView.classList.contains('hidden')) renderReport();
   if (!categoriesView.classList.contains('hidden')) renderCategoriesView();
+  if (!periodsView.classList.contains('hidden')) renderPeriodsView();
 }
 
 function escapeHtml(str) {
@@ -679,6 +716,11 @@ spendForm.addEventListener('submit', e => {
 function renderCategoriesView() {
   categoryList.innerHTML = '';
   const sorted = [...data.categories].sort((a, b) => a.name.localeCompare(b.name));
+
+  const totalBudget = sorted.reduce((sum, c) => sum + (c.budget || 0), 0);
+  categoryBudgetTotal.classList.toggle('hidden', totalBudget <= 0);
+  if (totalBudget > 0) categoryBudgetTotal.innerHTML = `Total budget: <strong>${money(totalBudget)}</strong>`;
+
   if (!sorted.length) {
     categoryList.innerHTML = '<li class="empty-msg">No categories yet.</li>';
     return;
@@ -746,11 +788,14 @@ function selectMonth(monthId) {
 
 function renderMonthSelect() {
   const sorted = [...data.months].sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt));
-  if (!sorted.some(m => m.id === selectedMonthId)) selectedMonthId = currentMonth().id;
+  if (!sorted.some(m => m.id === selectedMonthId)) {
+    selectedMonthId = currentMonth()?.id ?? sorted[0]?.id ?? null;
+  }
 
   monthDropdown.innerHTML = '';
+  monthTriggerLabel.textContent = 'Select period';
   for (const m of sorted) {
-    const label = m.label + (m.endedAt ? '' : ' (current)');
+    const label = m.label + (m.id === data.currentMonthId ? ' (current)' : '');
     if (m.id === selectedMonthId) monthTriggerLabel.textContent = label;
     const item = document.createElement('button');
     item.type = 'button';
@@ -815,7 +860,7 @@ function renderCompareMonthSelect() {
   compareMonthDropdown.appendChild(noneItem);
 
   for (const m of options) {
-    const label = m.label + (m.endedAt ? '' : ' (current)');
+    const label = m.label + (m.id === data.currentMonthId ? ' (current)' : '');
     const item = document.createElement('button');
     item.type = 'button';
     item.className = 'dropdown-item' + (m.id === selectedCompareMonthId ? ' selected' : '');
@@ -825,7 +870,7 @@ function renderCompareMonthSelect() {
   }
 
   const selectedM = options.find(m => m.id === selectedCompareMonthId);
-  compareMonthTriggerLabel.textContent = selectedM ? selectedM.label + (selectedM.endedAt ? '' : ' (current)') : 'None';
+  compareMonthTriggerLabel.textContent = selectedM ? selectedM.label + (selectedM.id === data.currentMonthId ? ' (current)' : '') : 'None';
 }
 
 // Builds one period's row within a category block: label, amount, and the
@@ -859,6 +904,14 @@ function buildPeriodRowHtml(label, amount, budget, max) {
 }
 
 function renderReport() {
+  if (!data.months.length) {
+    noPeriodsMsg.classList.remove('hidden');
+    reportContent.classList.add('hidden');
+    return;
+  }
+  noPeriodsMsg.classList.add('hidden');
+  reportContent.classList.remove('hidden');
+
   renderMonthSelect();
   renderCompareMonthSelect();
   const month = data.months.find(m => m.id === selectedMonthId);
@@ -912,54 +965,92 @@ function renderReport() {
   }
 }
 
-// ── Start / rename / delete period ────────────────────────────────────────────
+// ── Periods view ──────────────────────────────────────────────────────────────
 
 function renderAll() {
   renderCategorySelect();
   renderMoneyViews();
 }
 
-startMonthBtn.addEventListener('click', () => {
-  startMonthMessage.textContent = `This archives "${currentMonth().label}" and begins a new period. Past periods stay available in Summary.`;
-  newMonthNameInput.value = formatMonthLabel(new Date());
-  startMonthDialog.showModal();
-});
+function renderPeriodsView() {
+  periodList.innerHTML = '';
+  const sorted = [...data.months].sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt));
+  if (!sorted.length) {
+    periodList.innerHTML = '<li class="empty-msg">No periods yet.</li>';
+    return;
+  }
+  for (const m of sorted) {
+    const isCurrent = m.id === data.currentMonthId;
+    const li = document.createElement('li');
+    li.className = 'period-item';
+    li.innerHTML = `
+      <div class="period-info">
+        <div class="period-name">${escapeHtml(m.label)}${isCurrent ? ' <span class="current-badge">Current</span>' : ''}</div>
+        <div class="period-total">${money(monthTotal(m))} spent</div>
+      </div>
+      <div class="period-actions">
+        ${!isCurrent ? `<button type="button" class="btn-link make-current-btn">Make current</button>` : ''}
+        <div class="period-icon-actions">
+          <button type="button" class="icon-btn-square rename-period-btn" aria-label="Rename period">${PENCIL_ICON_SVG}</button>
+          <button type="button" class="icon-btn-square danger delete-period-btn" aria-label="Delete period">${BIN_ICON_SVG}</button>
+        </div>
+      </div>
+    `;
+    const makeCurrentBtn = li.querySelector('.make-current-btn');
+    if (makeCurrentBtn) {
+      makeCurrentBtn.addEventListener('click', () => {
+        setCurrentMonth(m.id);
+        renderAll();
+      });
+    }
+    li.querySelector('.rename-period-btn').addEventListener('click', () => openRenamePeriodDialog(m.id));
+    li.querySelector('.delete-period-btn').addEventListener('click', () => {
+      const count = m.spends.length;
+      openConfirm(
+        'Delete period?',
+        `Delete "${m.label}" and its ${count} spend${count === 1 ? '' : 's'}? This can't be undone.`,
+        () => { deleteMonth(m.id); renderAll(); },
+      );
+    });
+    periodList.appendChild(li);
+  }
+}
 
-startMonthCancelBtn.addEventListener('click', () => startMonthDialog.close());
+let pendingRenameMonthId = null;
 
-startMonthConfirmBtn.addEventListener('click', () => {
-  startNewMonth(newMonthNameInput.value);
-  startMonthDialog.close();
-  renderAll();
-});
-
-renameMonthBtn.addEventListener('click', () => {
-  const month = data.months.find(m => m.id === selectedMonthId);
+function openRenamePeriodDialog(monthId) {
+  const month = data.months.find(m => m.id === monthId);
   if (!month) return;
+  pendingRenameMonthId = monthId;
   renameMonthInput.value = month.label;
   renameMonthDialog.showModal();
   renameMonthInput.focus();
-});
+}
 
 renameMonthCancelBtn.addEventListener('click', () => renameMonthDialog.close());
 
 renameMonthConfirmBtn.addEventListener('click', () => {
-  const month = data.months.find(m => m.id === selectedMonthId);
-  if (!month) return;
-  renameMonth(month.id, renameMonthInput.value);
+  if (!pendingRenameMonthId) return;
+  renameMonth(pendingRenameMonthId, renameMonthInput.value);
   renameMonthDialog.close();
   renderAll();
 });
 
-deleteMonthBtn.addEventListener('click', () => {
-  const month = data.months.find(m => m.id === selectedMonthId);
-  if (!month) return;
-  const count = month.spends.length;
-  openConfirm(
-    'Delete period?',
-    `Delete "${month.label}" and its ${count} spend${count === 1 ? '' : 's'}? This can't be undone.`,
-    () => { deleteMonth(month.id); renderAll(); },
-  );
+function openAddPeriodDialog() {
+  newPeriodNameInput.value = '';
+  addPeriodDialog.showModal();
+  newPeriodNameInput.focus();
+}
+
+addPeriodBtn.addEventListener('click', openAddPeriodDialog);
+
+addPeriodCancelBtn.addEventListener('click', () => addPeriodDialog.close());
+
+addPeriodConfirmBtn.addEventListener('click', () => {
+  const period = addPeriod(newPeriodNameInput.value);
+  if (!period) { newPeriodNameInput.focus(); return; }
+  addPeriodDialog.close();
+  renderAll();
 });
 
 // ── Sharing ───────────────────────────────────────────────────────────────────
