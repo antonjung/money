@@ -1,4 +1,4 @@
-const APP_VERSION = 'v2.5';
+const APP_VERSION = 'v2.6';
 
 // ── Sound ─────────────────────────────────────────────────────────────────────
 
@@ -566,10 +566,13 @@ const monthDropdown = document.getElementById('monthDropdown');
 const compareMonthTrigger = document.getElementById('compareMonthTrigger');
 const compareMonthTriggerLabel = document.getElementById('compareMonthTriggerLabel');
 const compareMonthDropdown = document.getElementById('compareMonthDropdown');
-const reportTotal = document.getElementById('reportTotal');
 const breakdownWrapper = document.getElementById('breakdownWrapper');
 const breakdownMainLabel = document.getElementById('breakdownMainLabel');
 const breakdownCompareLabel = document.getElementById('breakdownCompareLabel');
+const breakdownFooter = document.getElementById('breakdownFooter');
+const breakdownTotalCurrent = document.getElementById('breakdownTotalCurrent');
+const breakdownTotalCompare = document.getElementById('breakdownTotalCompare');
+const breakdownTotalBudget = document.getElementById('breakdownTotalBudget');
 const categoryBreakdown = document.getElementById('categoryBreakdown');
 
 const categoryList = document.getElementById('categoryList');
@@ -1206,9 +1209,6 @@ function renderReport() {
     ? data.months.find(m => m.id === selectedCompareMonthId)
     : null;
 
-  const total = monthTotal(month);
-  reportTotal.textContent = money(total);
-
   const totals = categoryTotals(month);
   const compareTotals = compareMonth ? categoryTotals(compareMonth) : new Map();
 
@@ -1219,32 +1219,41 @@ function renderReport() {
       name: findCategory(id)?.name || 'Unknown',
       amount: totals.get(id) || 0,
       compareAmount: compareTotals.get(id) || 0,
+      budget: findCategory(id)?.budget || 0,
     }))
     .sort((a, b) => b.amount - a.amount || b.compareAmount - a.compareAmount);
 
   breakdownWrapper.classList.toggle('no-compare', !compareMonth);
   breakdownMainLabel.textContent = month.label;
   breakdownCompareLabel.textContent = compareMonth ? compareMonth.label : '';
+  breakdownCompareLabel.classList.toggle('hidden', !compareMonth);
+  breakdownTotalCompare.classList.toggle('hidden', !compareMonth);
 
   categoryBreakdown.innerHTML = '';
   if (!rows.length) {
     categoryBreakdown.innerHTML = '<li class="empty-msg">No spends recorded for this period.</li>';
+    breakdownFooter.classList.add('hidden');
     return;
   }
+  breakdownFooter.classList.remove('hidden');
 
   for (const r of rows) {
-    const budget = findCategory(r.id)?.budget || 0;
-    const currentClass = budgetColorClass(r.amount, budget);
+    const currentClass = budgetColorClass(r.amount, r.budget);
 
     const li = document.createElement('li');
     li.className = 'breakdown-item';
     li.innerHTML = `
       <span class="breakdown-cat-name">${escapeHtml(r.name)}</span>
       <span class="breakdown-cat-amount ${currentClass}">${money(r.amount)}</span>
-      ${compareMonth ? `<span class="breakdown-cat-amount ${budgetColorClass(r.compareAmount, budget)}">${money(r.compareAmount)}</span>` : ''}
+      ${compareMonth ? `<span class="breakdown-cat-amount ${budgetColorClass(r.compareAmount, r.budget)}">${money(r.compareAmount)}</span>` : ''}
+      <span class="breakdown-cat-budget">${r.budget > 0 ? money(r.budget) : '—'}</span>
     `;
     categoryBreakdown.appendChild(li);
   }
+
+  breakdownTotalCurrent.textContent = money(rows.reduce((sum, r) => sum + r.amount, 0));
+  breakdownTotalCompare.textContent = money(rows.reduce((sum, r) => sum + r.compareAmount, 0));
+  breakdownTotalBudget.textContent = money(rows.reduce((sum, r) => sum + r.budget, 0));
 }
 
 // ── Periods view ──────────────────────────────────────────────────────────────

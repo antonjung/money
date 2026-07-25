@@ -85,23 +85,32 @@ Empty state if there are no periods at all (`data.months.length === 0`) —
 otherwise, choose a period (default: current). A compact CSS-grid table
 (`.breakdown-header` + one `.breakdown-item` `<li>` per category, union of
 both periods' categories, sorted by main-period spend): category name,
-current-period amount, compare-period amount, all on one row. Grid columns
-are `1fr 84px 84px` (collapsing to `1fr 84px` via `.breakdown-wrapper.no-compare`
-when there's no compare period), so the header row's period-name labels line
-up with the amount columns beneath them without repeating a label per row —
-this replaced an earlier design that stacked a full labeled sub-row + budget
-bar per period per category, which was far too tall for a screen meant to be
-scanned at a glance.
+current-period amount, compare-period amount, budget, all on one row. Grid
+columns are `1fr 76px 76px 60px` (collapsing to `1fr 76px 60px` via
+`.breakdown-wrapper.no-compare` when there's no compare period — the
+compare header label and footer total are `.hidden`-toggled rather than
+just emptied, so they drop out of the grid instead of leaving a blank
+column), so the header row's period-name labels line up with the amount
+columns beneath them without repeating a label per row.
 
-Each amount is colored relative to that category's `budget`
+Current/compare amounts are colored relative to that category's `budget`
 (`budgetColorClass`): green at or under budget, amber up to 10% over, red
 beyond that; no color (default text) when the category has no budget set.
-Current and compare amounts are colored independently against the same
-budget. A category with spend in only one of the two periods still gets a
-value in both columns — the other just shows £0.00. No bars, no
-share-of-total percentage, no "£X left/over budget" text, no change
-line — the two colored numbers side by side already show status and
-direction of change without needing any of that spelled out.
+Current and compare are colored independently against the same budget. The
+budget column itself (`.breakdown-cat-budget`) is small and muted — it's
+reference context, not the headline numbers — showing "—" when unset. A
+category with spend in only one of the two periods still gets a value in
+both amount columns — the other just shows £0.00.
+
+A `.breakdown-footer` row sums each column (current/compare/budget, over
+just the categories shown — i.e. the ones with spend in either period, not
+every category that exists) and replaces the old standalone period-total
+figure above the table entirely; showing the same number twice (once big
+above, once in the table) was redundant once the table carried its own
+totals row. Hidden along with the rest of the table when there's nothing to
+show. No bars, no share-of-total percentage, no change line — the numbers
+side by side already show status and direction of change without needing
+any of that spelled out.
 
 A second picker ("Compare with") sets which period that second column is —
 defaults to whatever's immediately before the main period chronologically

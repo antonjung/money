@@ -366,20 +366,24 @@ input.spend-date-input {
 .empty-state .btn { margin: 14px 0 0; }
 
 /* Report */
-.report-total {
-  font-size: 2rem;
-  font-weight: 800;
-  color: var(--accent);
-  margin: 4px 0 20px;
-  font-variant-numeric: tabular-nums;
-}
-
 .breakdown-wrapper { margin-top: 4px; }
 
-.breakdown-header {
+.breakdown-header,
+.breakdown-item,
+.breakdown-footer {
   display: grid;
-  grid-template-columns: 1fr 84px 84px;
+  grid-template-columns: 1fr 76px 76px 60px;
   gap: 10px;
+  align-items: center;
+}
+
+.breakdown-wrapper.no-compare .breakdown-header,
+.breakdown-wrapper.no-compare .breakdown-item,
+.breakdown-wrapper.no-compare .breakdown-footer {
+  grid-template-columns: 1fr 76px 60px;
+}
+
+.breakdown-header {
   padding-bottom: 8px;
   margin-bottom: 4px;
   border-bottom: 1px solid rgba(255,255,255,0.08);
@@ -390,18 +394,9 @@ input.spend-date-input {
 }
 .breakdown-header span:not(:first-child) { text-align: right; }
 
-.breakdown-wrapper.no-compare .breakdown-header,
-.breakdown-wrapper.no-compare .breakdown-item {
-  grid-template-columns: 1fr 84px;
-}
-
 .breakdown-list { list-style: none; }
 
 .breakdown-item {
-  display: grid;
-  grid-template-columns: 1fr 84px 84px;
-  gap: 10px;
-  align-items: center;
   padding: 9px 0;
   border-bottom: 1px solid rgba(255,255,255,0.06);
 }
@@ -424,6 +419,25 @@ input.spend-date-input {
 .breakdown-cat-amount.under-budget { color: var(--accent); }
 .breakdown-cat-amount.over-budget-mild { color: var(--amber); }
 .breakdown-cat-amount.over-budget { color: var(--danger); }
+
+.breakdown-cat-budget {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-align: right;
+}
+
+.breakdown-footer {
+  padding-top: 10px;
+  margin-top: 2px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  font-weight: 700;
+}
+.breakdown-footer span:not(:first-child) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.breakdown-footer span:last-child { font-size: 0.78rem; color: var(--muted); font-weight: 600; }
 
 /* Dialogs */
 dialog {
