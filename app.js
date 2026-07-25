@@ -1,4 +1,4 @@
-const APP_VERSION = 'v1.2';
+const APP_VERSION = 'v1.3';
 
 // ── Storage ───────────────────────────────────────────────────────────────────
 
@@ -486,7 +486,7 @@ function renderHistoryView() {
 
   spendList.innerHTML = '';
   if (!month.spends.length) {
-    spendList.innerHTML = '<li class="empty-msg">No spends recorded yet this month.</li>';
+    spendList.innerHTML = '<li class="empty-msg">No spends recorded yet this period.</li>';
     return;
   }
   const sorted = [...month.spends].sort((a, b) => b.at.localeCompare(a.at) || b.id.localeCompare(a.id));
@@ -592,7 +592,7 @@ function renderReport() {
 
   categoryBreakdown.innerHTML = '';
   if (!rows.length) {
-    categoryBreakdown.innerHTML = '<li class="empty-msg">No spends recorded for this month.</li>';
+    categoryBreakdown.innerHTML = '<li class="empty-msg">No spends recorded for this period.</li>';
   } else {
     const max = Math.max(...rows.map(r => r.amount));
     for (const r of rows) {
@@ -620,7 +620,7 @@ function renderReport() {
 
   comparisonList.innerHTML = '';
   if (!prevMonth) {
-    comparisonList.innerHTML = '<li class="empty-msg">No previous month to compare.</li>';
+    comparisonList.innerHTML = '<li class="empty-msg">No previous period to compare.</li>';
     return;
   }
   const prevTotals = categoryTotals(prevMonth);
@@ -685,7 +685,7 @@ menuBtn.addEventListener('click', () => {
 closeMenuBtn.addEventListener('click', () => menuDialog.close());
 
 startMonthBtn.addEventListener('click', () => {
-  startMonthMessage.textContent = `This archives "${currentMonth().label}" and begins a new month. Past months stay available in Report.`;
+  startMonthMessage.textContent = `This archives "${currentMonth().label}" and begins a new period. Past periods stay available in Report.`;
   newMonthNameInput.value = formatMonthLabel(new Date());
   menuDialog.close();
   startMonthDialog.showModal();
@@ -704,7 +704,7 @@ deleteMonthBtn.addEventListener('click', () => {
   if (!month) return;
   const count = month.spends.length;
   openConfirm(
-    'Delete month?',
+    'Delete period?',
     `Delete "${month.label}" and its ${count} spend${count === 1 ? '' : 's'}? This can't be undone.`,
     () => { deleteMonth(month.id); renderAll(); },
   );

@@ -72,10 +72,10 @@
 
       <section id="reportView" class="view hidden">
         <div class="field">
-          <label for="monthSelect">Month</label>
+          <label for="monthSelect">Period</label>
           <div class="field-row">
             <select id="monthSelect"></select>
-            <button id="deleteMonthBtn" class="icon-btn-danger" aria-label="Delete month" type="button">
+            <button id="deleteMonthBtn" class="icon-btn-danger" aria-label="Delete period" type="button">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
             </button>
           </div>
@@ -84,7 +84,7 @@
         <div id="reportTotal" class="report-total"></div>
         <ul id="categoryBreakdown" class="breakdown-list"></ul>
 
-        <h2 class="section-title">Vs previous month</h2>
+        <h2 class="section-title">Vs previous period</h2>
         <ul id="comparisonList" class="comparison-list"></ul>
       </section>
     </main>
@@ -93,8 +93,8 @@
   <dialog id="menuDialog">
     <div class="dialog-content">
       <h2>Menu</h2>
-      <p class="muted">Current month: <span id="menuCurrentLabel"></span></p>
-      <button id="startMonthBtn" class="btn btn-secondary">Start new month</button>
+      <p class="muted">Current period: <span id="menuCurrentLabel"></span></p>
+      <button id="startMonthBtn" class="btn btn-secondary">Start new period</button>
 
       <h3>Categories</h3>
       <ul id="categoryListMenu" class="category-list"></ul>
@@ -115,15 +115,15 @@
 
   <dialog id="startMonthDialog">
     <div class="dialog-content">
-      <h2>Start new month</h2>
+      <h2>Start new period</h2>
       <p id="startMonthMessage" class="muted"></p>
       <div class="field">
-        <label for="newMonthNameInput">Month name</label>
+        <label for="newMonthNameInput">Period name</label>
         <input id="newMonthNameInput" type="text">
       </div>
       <div class="dialog-actions">
         <button id="startMonthCancelBtn" class="btn btn-ghost">Cancel</button>
-        <button id="startMonthConfirmBtn" class="btn btn-danger">Start month</button>
+        <button id="startMonthConfirmBtn" class="btn btn-danger">Start period</button>
       </div>
     </div>
   </dialog>
