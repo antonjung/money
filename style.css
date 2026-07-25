@@ -291,6 +291,22 @@ dialog::backdrop { background: rgba(0,0,0,0.5); }
 .dialog-actions { display: flex; gap: 10px; margin-top: 18px; }
 .dialog-actions .btn { margin: 0; }
 
+/* Group sharing */
+.group-status {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 10px;
+  min-height: 1.2em;
+}
+.group-status.active { color: var(--accent); }
+.group-status.error { color: var(--danger); }
+
+#groupJoinForm input {
+  margin-bottom: 10px;
+}
+
+.muted.small { font-size: 0.78rem; margin-top: -2px; }
+
 .category-list { list-style: none; }
 .category-list li {
   padding: 10px 0;

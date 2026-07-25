@@ -1,9 +1,10 @@
-const CACHE = 'money-v1.0';
+const CACHE = 'money-v1.1';
 const ASSETS = [
   './',
   './index.html',
   './style.css',
   './app.js',
+  './firebase-config.js',
   './manifest.json',
   './icon.svg',
   './icon-mask.svg',

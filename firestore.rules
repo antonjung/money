@@ -1,0 +1,18 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // One document per group, keyed by a hash of the normalized group name
+    // (never the name itself). Content is client-side encrypted with a key
+    // derived from group name + PIN, so open read/write here is fine — a
+    // reader without the PIN gets ciphertext they can't decrypt.
+    match /groups/{groupId} {
+      allow read: if true;
+      allow write: if request.resource.data.keys().hasOnly(['ciphertext', 'iv', 'v', 'updatedAt'])
+                   && request.resource.data.ciphertext is string
+                   && request.resource.data.ciphertext.size() < 900000
+                   && request.resource.data.iv is string
+                   && request.resource.data.v is int
+                   && request.resource.data.updatedAt is int;
+    }
+  }
+}

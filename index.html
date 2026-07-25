@@ -82,6 +82,16 @@
       <h3>Categories</h3>
       <ul id="categoryListMenu" class="category-list"></ul>
 
+      <h3>Sharing</h3>
+      <div id="groupStatus" class="group-status"></div>
+      <div id="groupJoinForm">
+        <input id="groupNameInput" type="text" placeholder="Group name" autocomplete="off">
+        <input id="groupPinInput" type="text" inputmode="numeric" placeholder="PIN" autocomplete="off">
+        <button id="joinGroupBtn" class="btn btn-secondary">Join / create group</button>
+        <p class="muted small">Anyone using the same group name + PIN shares this data live.</p>
+      </div>
+      <button id="leaveGroupBtn" class="btn btn-ghost hidden">Leave group</button>
+
       <button id="closeMenuBtn" class="btn btn-ghost">Close</button>
     </div>
   </dialog>
@@ -103,6 +113,7 @@
     <button id="dismissUpdateBtn" aria-label="Dismiss">✕</button>
   </div>
 
+  <script src="firebase-config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
