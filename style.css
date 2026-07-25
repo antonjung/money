@@ -512,3 +512,29 @@ input.category-budget-input:focus { border-color: var(--accent); outline: none; 
 
 #reloadBtn { color: var(--accent); }
 #dismissUpdateBtn { color: var(--muted); font-size: 1rem; }
+
+/* Toast */
+#toast {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(76px + env(safe-area-inset-bottom));
+  max-width: 448px;
+  margin: 0 auto;
+  background: var(--surface-2);
+  border: 1px solid rgba(52,211,153,0.3);
+  border-radius: 14px;
+  padding: 14px 16px;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  z-index: 400;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+}
+
+#toast.show { opacity: 1; transform: translateY(0); }

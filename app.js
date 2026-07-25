@@ -1,4 +1,4 @@
-const APP_VERSION = 'v1.15';
+const APP_VERSION = 'v1.16';
 
 // ── Sound ─────────────────────────────────────────────────────────────────────
 
@@ -666,6 +666,8 @@ spendForm.addEventListener('submit', e => {
 
   addSpend(selectedCategoryId, amount);
   playAddedSound();
+  const cat = findCategory(selectedCategoryId);
+  showToast(`${money(amount)} added to ${cat ? cat.name : 'category'}`);
 
   amountInput.value = '';
   amountInput.blur();
@@ -1027,6 +1029,18 @@ reloadBtn.addEventListener('click', () => {
 });
 
 dismissUpdateBtn.addEventListener('click', () => updateBanner.classList.add('hidden'));
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+
+const toast = document.getElementById('toast');
+let toastTimeout = null;
+
+function showToast(message) {
+  toast.textContent = message;
+  toast.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => toast.classList.remove('show'), 2200);
+}
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 

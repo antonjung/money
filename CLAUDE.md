@@ -34,9 +34,11 @@ Bottom nav, four screens (icon + label, like the `rehearsal` app):
 ### Home (spend view)
 Entry-only — category, amount — nothing else, so it's as fast as possible for
 repeated use. Blurs the amount field after adding (closes the numeric
-keypad) rather than refocusing it, and plays a soft two-note chime
+keypad) rather than refocusing it, plays a soft two-note chime
 (`playAddedSound`, same lazy-AudioContext-in-a-user-gesture pattern as the
-`timeit` app) as an audible confirmation. The category picker is an
+`timeit` app), and shows a toast ("£X added to Category") that fades out
+after ~2.2s (`showToast` — a fixed `#toast` element toggling a `.show` class
+for the fade, positioned like `#updateBanner`). The category picker is an
 expandable list
 (trigger button + chevron that flips, tap a row to pick and it closes), the
 same pattern `rehearsal` uses for "Download from shared library" — not a
