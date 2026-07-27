@@ -55,16 +55,28 @@ tab is what used to be a separate Categories screen — the old picker+amount
 spend-entry form is gone entirely, replaced by adding spends straight from
 each category's card (see below).
 
+Because Home and List let you view (and act on) any period, not just the
+current one, every action that adds, updates, or deletes a spend checks the
+period it's acting on against `currentMonthId` first
+(`confirmNonCurrentPeriod`). If they match, it just happens, same as
+always. If they don't, a warning names the period ("… isn't the current
+period. Continue?") and requires an explicit Continue before anything is
+written — a plain neutral button, not the red destructive style, since
+adding/updating a past spend isn't dangerous, just easy to do by accident
+while browsing. Delete spend and bulk Reassign already had their own
+confirm dialogs, so the non-current note is folded into those instead of
+stacking a second dialog; add spend, the inline date edit, and Edit spend
+had no confirm step before, so this is the first one they get, and only
+when it's actually needed.
+
 ### Home (formerly Categories)
 A "Period" picker (`homeMonthPicker`, same dropdown-trigger pattern as
 everywhere else) sets which period this screen is viewing — defaults to the
 current period but can be switched to any other, independently of what's
-actually current. It resets back to current every time you navigate to the
-Home tab (`switchToView` forces `homeMonthId = currentMonth()?.id` on entry)
-— so switching away and back always lands you back on the current period
-rather than wherever you last left it; List and Summary's own pickers do the
-same on their tabs. Every card on the page (totals, the "+" add-spend icon)
-reflects whichever period is picked here, and adding a spend writes into
+actually current, and stays on your choice across tab switches (only
+re-defaults if that period no longer exists). Every card on the page
+(totals, the "+" add-spend icon) reflects whichever period is picked here,
+and adding a spend writes into
 *that* period, not necessarily `currentMonthId` — e.g. you can switch to a
 past period on Home and log a spend directly into it. The picker still shows
 "No periods yet" and every card just reads £0.00 spent when
@@ -116,9 +128,8 @@ create a category, there's no quick-add elsewhere.
 
 ### List (history view)
 Its own "Period" picker (`historyMonthPicker`, same pattern as Home/Summary,
-defaults to current and resets to current every time you navigate to this
-tab) sets which period's spends are shown — independent of Home's picker
-and of `currentMonthId`. A "Filter by category" dropdown (same
+defaults to current) sets which period's spends are shown — independent of
+Home's picker and of `currentMonthId`. A "Filter by category" dropdown (same
 expandable-list pattern, with an "All categories" option) narrows the list
 further. The viewed period's recorded spends: date is editable inline,
 pencil icon opens Edit spend (category + amount, via
@@ -139,8 +150,7 @@ category change.
 
 ### Summary (report view)
 Empty state if there are no periods at all (`data.months.length === 0`) —
-otherwise, choose a period (default: current; also resets to current every
-time you navigate to this tab, like Home and List). A compact CSS-grid table
+otherwise, choose a period (default: current). A compact CSS-grid table
 (`.breakdown-header` + one `.breakdown-item` `<li>` per category, union of
 both periods' categories, sorted by main-period spend): category name,
 current-period amount, compare-period amount, budget, all on one row. Grid

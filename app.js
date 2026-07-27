@@ -1,4 +1,4 @@
-const APP_VERSION = 'v3.2';
+const APP_VERSION = 'v3.3';
 
 // ── Sound ─────────────────────────────────────────────────────────────────────
 
@@ -611,52 +611,66 @@ const confirmCancelBtn = document.getElementById('confirmCancelBtn');
 const confirmOkBtn = document.getElementById('confirmOkBtn');
 
 let pendingConfirmAction = null;
+let pendingCancelAction = null;
 
-function openConfirm(title, message, action) {
+// `options.okLabel`/`okClass` let non-destructive warnings (e.g. "not the
+// current period") use a neutral button instead of the default red
+// "Confirm", which is meant for actually-destructive actions like delete.
+function openConfirm(title, message, action, options = {}) {
   confirmTitle.textContent = title;
   confirmMessage.textContent = message;
+  confirmOkBtn.textContent = options.okLabel || 'Confirm';
+  confirmOkBtn.className = 'btn ' + (options.okClass || 'btn-danger');
   pendingConfirmAction = action;
+  pendingCancelAction = options.onCancel || null;
   confirmDialog.showModal();
 }
 
 confirmCancelBtn.addEventListener('click', () => {
+  const cancelAction = pendingCancelAction;
   pendingConfirmAction = null;
+  pendingCancelAction = null;
   confirmDialog.close();
+  if (cancelAction) cancelAction();
 });
 
 confirmOkBtn.addEventListener('click', () => {
   const action = pendingConfirmAction;
   pendingConfirmAction = null;
+  pendingCancelAction = null;
   confirmDialog.close();
   if (action) action();
 });
 
+// Warns before adding, updating, or deleting a spend in a period that
+// isn't the actual current one — Home/List let you view and act on any
+// period, so it's easy to change history by accident while browsing it.
+// Runs `action` straight away (no dialog) when the period IS current.
+function confirmNonCurrentPeriod(monthId, message, action, onCancel) {
+  if (!monthId || monthId === data.currentMonthId) {
+    action();
+    return;
+  }
+  const month = data.months.find(m => m.id === monthId);
+  openConfirm(
+    'Not the current period',
+    `${message} "${month ? month.label : 'This period'}" isn't the current period. Continue?`,
+    action,
+    { okLabel: 'Continue', okClass: 'btn-primary', onCancel },
+  );
+}
+
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
-// Home, List, and Summary each default their own period picker to the
-// current period on load — but since the pickers only re-resolve an
-// *invalid* selection, simply revisiting a tab wouldn't otherwise snap
-// back to current after you'd viewed something else there. So every time
-// you navigate to one of these tabs, its picker is explicitly reset to
-// whatever's current right now.
 function switchToView(view) {
   tabs.forEach(t => t.classList.toggle('active', t.dataset.view === view));
   spendView.classList.toggle('hidden', view !== 'spend');
   historyView.classList.toggle('hidden', view !== 'history');
   reportView.classList.toggle('hidden', view !== 'report');
   periodsView.classList.toggle('hidden', view !== 'periods');
-  if (view === 'spend') {
-    homeMonthId = currentMonth()?.id ?? null;
-    renderCategoriesView();
-  }
-  if (view === 'history') {
-    historyMonthId = currentMonth()?.id ?? null;
-    renderHistoryView();
-  }
-  if (view === 'report') {
-    selectedMonthId = currentMonth()?.id ?? null;
-    renderReport();
-  }
+  if (view === 'spend') renderCategoriesView();
+  if (view === 'history') renderHistoryView();
+  if (view === 'report') renderReport();
   if (view === 'periods') renderPeriodsView();
 }
 
@@ -827,14 +841,20 @@ function renderHistoryView() {
       <button class="spend-delete" aria-label="Delete">${BIN_ICON_SVG}</button>
     `;
     li.querySelector('.spend-date-input').addEventListener('change', e => {
-      updateSpendDate(month.id, s.id, e.target.value || todayISODate());
-      renderHistoryView();
+      const newDate = e.target.value || todayISODate();
+      confirmNonCurrentPeriod(
+        month.id,
+        "Updating this spend's date.",
+        () => { updateSpendDate(month.id, s.id, newDate); renderHistoryView(); },
+        () => renderHistoryView(),
+      );
     });
     li.querySelector('.spend-edit').addEventListener('click', () => openEditSpendDialog(month.id, s.id));
     li.querySelector('.spend-delete').addEventListener('click', () => {
+      const notCurrent = month.id !== data.currentMonthId;
       openConfirm(
         'Delete spend?',
-        `Delete this ${money(s.amount)} spend${cat ? ' in ' + cat.name : ''}? This can't be undone.`,
+        `Delete this ${money(s.amount)} spend${cat ? ' in ' + cat.name : ''}? This can't be undone.${notCurrent ? ` "${month.label}" isn't the current period.` : ''}`,
         () => { deleteSpend(month.id, s.id); renderAll(); },
       );
     });
@@ -889,7 +909,8 @@ reassignCategoryBtn.addEventListener('click', () => {
   if (!month || !historyFilterCategoryId) return;
   const count = month.spends.filter(s => s.categoryId === historyFilterCategoryId).length;
   const fromCat = findCategory(historyFilterCategoryId);
-  reassignCategoryMessage.textContent = `Move ${count} spend${count === 1 ? '' : 's'} in "${fromCat ? fromCat.name : 'this category'}" to:`;
+  const notCurrent = month.id !== data.currentMonthId;
+  reassignCategoryMessage.textContent = `Move ${count} spend${count === 1 ? '' : 's'} in "${fromCat ? fromCat.name : 'this category'}" to:${notCurrent ? ` "${month.label}" isn't the current period.` : ''}`;
   reassignSelectedCategoryId = null;
   reassignCategoryTriggerLabel.textContent = 'Select category';
   renderReassignCategoryDropdown();
@@ -965,9 +986,12 @@ editSpendConfirmBtn.addEventListener('click', () => {
   if (!pendingEditSpend || !editSpendSelectedCategoryId) return;
   const amount = parseFloat(editSpendAmountInput.value);
   if (!amount || amount <= 0) { editSpendAmountInput.focus(); return; }
-  updateSpend(pendingEditSpend.monthId, pendingEditSpend.spendId, editSpendSelectedCategoryId, amount);
+  const { monthId, spendId } = pendingEditSpend;
   editSpendDialog.close();
-  renderAll();
+  confirmNonCurrentPeriod(monthId, 'Updating this spend.', () => {
+    updateSpend(monthId, spendId, editSpendSelectedCategoryId, amount);
+    renderAll();
+  });
 });
 
 function renderMoneyViews() {
@@ -1109,12 +1133,16 @@ addCategorySpendConfirmBtn.addEventListener('click', () => {
   if (!pendingAddCategorySpendId || !homeMonthId) return;
   const amount = parseFloat(addCategorySpendAmountInput.value);
   if (!amount || amount <= 0) { addCategorySpendAmountInput.focus(); return; }
-  const cat = findCategory(pendingAddCategorySpendId);
-  addSpend(homeMonthId, pendingAddCategorySpendId, amount);
+  const categoryId = pendingAddCategorySpendId;
+  const monthId = homeMonthId;
+  const cat = findCategory(categoryId);
   addCategorySpendDialog.close();
-  playAddedSound();
-  showToast(`${money(amount)} added to ${cat ? cat.name : 'category'}`);
-  renderMoneyViews();
+  confirmNonCurrentPeriod(monthId, 'Adding this spend.', () => {
+    addSpend(monthId, categoryId, amount);
+    playAddedSound();
+    showToast(`${money(amount)} added to ${cat ? cat.name : 'category'}`);
+    renderMoneyViews();
+  });
 });
 
 function openAddCategoryDialog() {
