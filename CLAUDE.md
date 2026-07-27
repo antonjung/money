@@ -8,10 +8,14 @@ Self-contained, no backend — data lives in localStorage on the device.
 
 The header is `position: sticky` so it stays visible while a screen's
 content scrolls beneath it (History, Categories, and Summary can all get
-long). It's just the static "Money" wordmark plus the share icon — an
-earlier iteration turned it into a live current-period-plus-total display,
-but that was reverted; period context now lives in each screen's own picker
-instead (see Home, List, Summary below).
+long). It's the static "Money" wordmark plus a "go to current period" icon
+(target/crosshair glyph, `goToCurrentBtn`) — an earlier iteration turned the
+header into a live current-period-plus-total display, but that was
+reverted; period context now lives in each screen's own picker instead (see
+Home, List, Summary below). Clicking `goToCurrentBtn` snaps all three of
+those pickers (`homeMonthId`, `historyMonthId`, `selectedMonthId`) to
+`currentMonth()` in one action, regardless of which tab is active — the
+fast way back after browsing around in old periods.
 
 The version string lives at the bottom of the bottom nav (`.bottom-nav` is a
 column: the row of tab buttons, then a centered version caption beneath),
@@ -68,6 +72,16 @@ confirm dialogs, so the non-current note is folded into those instead of
 stacking a second dialog; add spend, the inline date edit, and Edit spend
 had no confirm step before, so this is the first one they get, and only
 when it's actually needed.
+
+None of the period-picker dropdowns (Home, List, Summary's main and compare
+pickers) label periods "(current)" any more — the list items are just plain
+period names. Instead, whenever a picker's *selected* period isn't current,
+its trigger button itself gets a visual nudge (`.dropdown-trigger.non-current`
+— amber border/background/text) so it's obvious you're looking at something
+other than the current period without cluttering every row in the dropdown.
+Summary's compare picker is deliberately excluded from this — comparing
+against a non-current period is the normal case there, not an exception
+worth flagging.
 
 ### Home (formerly Categories)
 A "Period" picker (`homeMonthPicker`, same dropdown-trigger pattern as
@@ -220,14 +234,13 @@ stays tight even with three actions per row:
 
 ## Group sharing
 
-The header icon (share glyph, top right) opens the Sharing dialog — set a
-group name + PIN there to share data live with anyone using the same pair
-(across devices/users) via Firestore, project `money-app-antonjung`
-(dedicated to this app, matching the rest of the GitHub.io suite). Optional —
-the app works fully offline until a group is set. (There's no general "..."
-menu any more — period management moved to Summary, sharing is its own
-button, since a catch-all menu for two unrelated things was the whole
-problem.)
+"Share" (share glyph, last item in the bottom nav — a `.nav-tab`-styled
+button with no `data-view`, so `switchToView` never picks it up) opens the
+Sharing dialog — set a group name + PIN there to share data live with
+anyone using the same pair (across devices/users) via Firestore, project
+`money-app-antonjung` (dedicated to this app, matching the rest of the
+GitHub.io suite). Optional — the app works fully offline until a group is
+set.
 
 Once in a group, "Invite others" (`inviteToGroup` in app.js) builds a link
 with the group name + PIN in the URL hash (`#group=X&pin=Y`, matching

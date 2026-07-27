@@ -1,4 +1,4 @@
-const APP_VERSION = 'v3.3';
+const APP_VERSION = 'v3.4';
 
 // ── Sound ─────────────────────────────────────────────────────────────────────
 
@@ -516,7 +516,8 @@ const PENCIL_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentCol
 const CHECK_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg>';
 const PLUS_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
 
-const tabs = document.querySelectorAll('.nav-tab');
+const tabs = document.querySelectorAll('.nav-tab[data-view]');
+const goToCurrentBtn = document.getElementById('goToCurrentBtn');
 const spendView = document.getElementById('spendView');
 const historyView = document.getElementById('historyView');
 const reportView = document.getElementById('reportView');
@@ -680,6 +681,17 @@ tabs.forEach(tab => {
 
 reportGoToPeriodsBtn.addEventListener('click', () => switchToView('periods'));
 
+// Snaps every screen's own period picker (Home, List, Summary) back to the
+// current period in one action — each picker otherwise keeps whatever was
+// last viewed independently, so this is the fast way back after browsing.
+goToCurrentBtn.addEventListener('click', () => {
+  const id = currentMonth()?.id ?? null;
+  homeMonthId = id;
+  historyMonthId = id;
+  selectedMonthId = id;
+  renderMoneyViews();
+});
+
 // ── Period pickers (Home, List) ──────────────────────────────────────────────
 // Both Home and List let you view (and, for Home, add spends into) any
 // period, not just the current one — same dropdown-trigger pattern Summary's
@@ -712,12 +724,11 @@ function createPeriodPicker({ trigger, dropdown, label, getSelected, setSelected
     dropdown.innerHTML = '';
     label.textContent = sorted.length ? 'Select period' : 'No periods yet';
     for (const m of sorted) {
-      const text = m.label + (m.id === data.currentMonthId ? ' (current)' : '');
-      if (m.id === selected) label.textContent = text;
+      if (m.id === selected) label.textContent = m.label;
       const item = document.createElement('button');
       item.type = 'button';
       item.className = 'dropdown-item' + (m.id === selected ? ' selected' : '');
-      item.textContent = text;
+      item.textContent = m.label;
       item.addEventListener('click', () => {
         setSelected(m.id);
         close();
@@ -725,6 +736,10 @@ function createPeriodPicker({ trigger, dropdown, label, getSelected, setSelected
       });
       dropdown.appendChild(item);
     }
+    // A visual nudge when viewing anything other than the current period —
+    // easy to lose track of since Home/List let you view (and act on) any
+    // period.
+    trigger.classList.toggle('non-current', !!selected && selected !== data.currentMonthId);
     return sorted;
   }
 
@@ -1200,15 +1215,16 @@ function renderMonthSelect() {
   monthDropdown.innerHTML = '';
   monthTriggerLabel.textContent = 'Select period';
   for (const m of sorted) {
-    const label = m.label + (m.id === data.currentMonthId ? ' (current)' : '');
-    if (m.id === selectedMonthId) monthTriggerLabel.textContent = label;
+    if (m.id === selectedMonthId) monthTriggerLabel.textContent = m.label;
     const item = document.createElement('button');
     item.type = 'button';
     item.className = 'dropdown-item' + (m.id === selectedMonthId ? ' selected' : '');
-    item.textContent = label;
+    item.textContent = m.label;
     item.addEventListener('click', () => selectMonth(m.id));
     monthDropdown.appendChild(item);
   }
+  // A visual nudge when viewing anything other than the current period.
+  monthTrigger.classList.toggle('non-current', !!selectedMonthId && selectedMonthId !== data.currentMonthId);
 }
 
 let selectedCompareMonthId = null;
@@ -1265,17 +1281,16 @@ function renderCompareMonthSelect() {
   compareMonthDropdown.appendChild(noneItem);
 
   for (const m of options) {
-    const label = m.label + (m.id === data.currentMonthId ? ' (current)' : '');
     const item = document.createElement('button');
     item.type = 'button';
     item.className = 'dropdown-item' + (m.id === selectedCompareMonthId ? ' selected' : '');
-    item.textContent = label;
+    item.textContent = m.label;
     item.addEventListener('click', () => selectCompareMonth(m.id));
     compareMonthDropdown.appendChild(item);
   }
 
   const selectedM = options.find(m => m.id === selectedCompareMonthId);
-  compareMonthTriggerLabel.textContent = selectedM ? selectedM.label + (selectedM.id === data.currentMonthId ? ' (current)' : '') : 'None';
+  compareMonthTriggerLabel.textContent = selectedM ? selectedM.label : 'None';
 }
 
 // Colors a spend amount relative to its category's budget: green at or

@@ -198,6 +198,15 @@ select {
 .dropdown-trigger:hover { border-color: rgba(15,23,42,0.15); }
 .dropdown-trigger.open { border-color: var(--accent); }
 
+/* Shown on a period picker whose selected period isn't the current one —
+   easy to lose track of since Home/List let you view (and act on) any
+   period, not just current. */
+.dropdown-trigger.non-current:not(.open) {
+  border-color: var(--amber);
+  background: rgba(var(--amber-rgb), 0.06);
+}
+.dropdown-trigger.non-current > span { color: var(--amber); }
+
 .dropdown-trigger .chevron {
   width: 18px;
   height: 18px;
