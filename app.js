@@ -1,4 +1,4 @@
-const APP_VERSION = 'v2.8';
+const APP_VERSION = 'v2.9';
 
 // ── Sound ─────────────────────────────────────────────────────────────────────
 
@@ -522,9 +522,8 @@ const reportView = document.getElementById('reportView');
 const categoriesView = document.getElementById('categoriesView');
 const periodsView = document.getElementById('periodsView');
 
-const currentMonthLabel = document.getElementById('currentMonthLabel');
-const currentMonthTotal = document.getElementById('currentMonthTotal');
-const headerPeriod = document.getElementById('headerPeriod');
+const headerPeriodLabel = document.getElementById('headerPeriodLabel');
+const headerPeriodTotal = document.getElementById('headerPeriodTotal');
 const noPeriodMsg = document.getElementById('noPeriodMsg');
 const goToPeriodsBtn = document.getElementById('goToPeriodsBtn');
 const noCategoriesMsg = document.getElementById('noCategoriesMsg');
@@ -535,8 +534,6 @@ const categoryTriggerLabel = document.getElementById('categoryTriggerLabel');
 const categoryDropdown = document.getElementById('categoryDropdown');
 const amountInput = document.getElementById('amountInput');
 
-const historyMonthLabel = document.getElementById('historyMonthLabel');
-const historyMonthTotal = document.getElementById('historyMonthTotal');
 const historyFilterTrigger = document.getElementById('historyFilterTrigger');
 const historyFilterTriggerLabel = document.getElementById('historyFilterTriggerLabel');
 const historyFilterDropdown = document.getElementById('historyFilterDropdown');
@@ -719,11 +716,10 @@ function renderCategorySelect() {
   spendForm.classList.toggle('hidden', !hasPeriod || !hasCategories);
 }
 
-function renderCurrentMonthBanner() {
+function renderHeaderPeriod() {
   const month = currentMonth();
-  currentMonthLabel.textContent = month ? month.label : '';
-  currentMonthTotal.textContent = month ? money(monthTotal(month)) : '';
-  headerPeriod.textContent = month ? month.label : 'No current period';
+  headerPeriodLabel.textContent = month ? month.label : 'No current period';
+  headerPeriodTotal.textContent = month ? money(monthTotal(month)) : '';
 }
 
 let historyFilterCategoryId = null; // null = all categories
@@ -777,14 +773,10 @@ function renderHistoryFilterDropdown() {
 function renderHistoryView() {
   const month = currentMonth();
   if (!month) {
-    historyMonthLabel.textContent = '';
-    historyMonthTotal.textContent = '';
     reassignCategoryBtn.classList.add('hidden');
     spendList.innerHTML = '<li class="empty-msg">No current period. Set one from the Periods tab.</li>';
     return;
   }
-  historyMonthLabel.textContent = month.label;
-  historyMonthTotal.textContent = money(monthTotal(month));
 
   renderHistoryFilterDropdown();
 
@@ -963,7 +955,7 @@ editSpendConfirmBtn.addEventListener('click', () => {
 });
 
 function renderMoneyViews() {
-  renderCurrentMonthBanner();
+  renderHeaderPeriod();
   renderHistoryView();
   if (!reportView.classList.contains('hidden')) renderReport();
   if (!categoriesView.classList.contains('hidden')) renderCategoriesView();

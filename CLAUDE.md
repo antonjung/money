@@ -8,11 +8,13 @@ Self-contained, no backend — data lives in localStorage on the device.
 
 The header (title + version) is `position: sticky` so it stays visible while
 a screen's content scrolls beneath it (History, Categories, and Summary can
-all get long). It also shows the current period's name (or "No current
-period") right under the title, on every screen — the one thing `Home` and
-`List` already surfaced in their own banners, but Summary, Categories, and
-Periods previously gave no indication of at all. Set by
-`renderCurrentMonthBanner`, which every `renderMoneyViews()` call re-runs
+all get long). The masthead itself *is* the current period indicator now —
+the `<h1>` shows the current period's name (or "No current period") with the
+period total right underneath, on every screen, replacing the static "Money"
+wordmark entirely. This used to be shown separately in per-screen banners on
+Home and List (and not at all on Summary, Categories, or Periods); those
+banners are gone now that the header covers it everywhere. Set by
+`renderHeaderPeriod`, which every `renderMoneyViews()` call re-runs
 regardless of which tab is active.
 
 ## Data
@@ -67,8 +69,8 @@ here).
 
 ### List (history view)
 A "Filter by category" dropdown (same expandable-list pattern, with an "All
-categories" option) narrows the list below it; the period total in the
-banner always stays the whole period's total regardless of the filter, only
+categories" option) narrows the list below it; the period total shown in the
+header always stays the whole period's total regardless of the filter, only
 the list itself is filtered. The current period's recorded spends: date is
 editable inline, pencil icon opens Edit spend (category + amount, via
 `openEditSpendDialog`/`updateSpend` — category picker is the same
