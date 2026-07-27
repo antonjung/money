@@ -1,4 +1,4 @@
-const APP_VERSION = 'v2.9';
+const APP_VERSION = 'v3.0';
 
 // ── Sound ─────────────────────────────────────────────────────────────────────
 
@@ -575,7 +575,6 @@ const breakdownTotalBudget = document.getElementById('breakdownTotalBudget');
 const categoryBreakdown = document.getElementById('categoryBreakdown');
 
 const categoryList = document.getElementById('categoryList');
-const categoryBudgetTotal = document.getElementById('categoryBudgetTotal');
 const addCategoryBtn = document.getElementById('addCategoryBtn');
 const addCategoryDialog = document.getElementById('addCategoryDialog');
 const newCategoryNameInput = document.getElementById('newCategoryNameInput');
@@ -991,16 +990,33 @@ function renderCategoriesView() {
   categoryList.innerHTML = '';
   const sorted = [...data.categories].sort((a, b) => a.name.localeCompare(b.name));
 
-  const totalBudget = sorted.reduce((sum, c) => sum + (c.budget || 0), 0);
-  categoryBudgetTotal.classList.toggle('hidden', totalBudget <= 0);
-  if (totalBudget > 0) categoryBudgetTotal.innerHTML = `Total budget: <strong>${money(totalBudget)}</strong>`;
-
   if (!sorted.length) {
     categoryList.innerHTML = '<li class="empty-msg">No categories yet.</li>';
     return;
   }
   const month = currentMonth();
   const spent = month ? categoryTotals(month) : new Map();
+
+  const totalBudget = sorted.reduce((sum, c) => sum + (c.budget || 0), 0);
+  const totalSpent = sorted.reduce((sum, c) => sum + (spent.get(c.id) || 0), 0);
+  const totalColorClass = budgetColorClass(totalSpent, totalBudget);
+  const totalPct = totalBudget > 0 ? Math.min(100, (totalSpent / totalBudget) * 100) : 0;
+  const totalLi = document.createElement('li');
+  totalLi.className = 'category-card category-total-card';
+  totalLi.innerHTML = `
+    <div class="category-card-top">
+      <span class="category-name">Total</span>
+    </div>
+    <div class="category-card-total ${totalColorClass}">${money(totalSpent)}</div>
+    <div class="category-card-sub">spent this period</div>
+    ${totalBudget > 0 ? `<div class="category-progress"><div class="category-progress-bar ${totalColorClass}" style="width:${totalPct}%"></div></div>` : ''}
+    <div class="category-card-budget-row">
+      <span class="muted small">Monthly budget</span>
+      <span class="category-total-budget-value">${totalBudget > 0 ? money(totalBudget) : '—'}</span>
+    </div>
+  `;
+  categoryList.appendChild(totalLi);
+
   for (const cat of sorted) {
     const canDelete = !categoryInUse(cat.id);
     const catSpent = spent.get(cat.id) || 0;

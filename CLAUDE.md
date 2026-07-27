@@ -6,16 +6,22 @@ PWA to track expenditure by category.
 
 Self-contained, no backend — data lives in localStorage on the device.
 
-The header (title + version) is `position: sticky` so it stays visible while
-a screen's content scrolls beneath it (History, Categories, and Summary can
-all get long). The masthead itself *is* the current period indicator now —
-the `<h1>` shows the current period's name (or "No current period") with the
-period total right underneath, on every screen, replacing the static "Money"
-wordmark entirely. This used to be shown separately in per-screen banners on
-Home and List (and not at all on Summary, Categories, or Periods); those
-banners are gone now that the header covers it everywhere. Set by
-`renderHeaderPeriod`, which every `renderMoneyViews()` call re-runs
-regardless of which tab is active.
+The header is `position: sticky` so it stays visible while a screen's
+content scrolls beneath it (History, Categories, and Summary can all get
+long). The masthead itself *is* the current period indicator now — the
+`<h1>` shows the current period's name and its total on one line, same size
+and weight throughout (two `<span>`s, no separate smaller style for the
+total), replacing the static "Money" wordmark entirely, on every screen. No
+current period reads as just "No current period" with no total. This used
+to be shown separately in per-screen banners on Home and List (and not at
+all on Summary, Categories, or Periods); those banners are gone now that the
+header covers it everywhere. Set by `renderHeaderPeriod`, which every
+`renderMoneyViews()` call re-runs regardless of which tab is active.
+
+The version string moved out of the header entirely and lives at the bottom
+of the bottom nav instead (`.bottom-nav` is now a column: the row of tab
+buttons, then a centered version caption beneath) — the header masthead is
+just the period now, not app chrome.
 
 ## Data
 
@@ -145,9 +151,14 @@ row at the bottom. Editing the budget re-renders the whole view
 (`renderCategoriesView` re-runs after `setCategoryBudget`, not just once on
 open), so the total's color and the progress bar can't go stale while you're
 editing. Adding a category here is the only way to create one — there's no
-quick-add from Home, to keep that form from doing two jobs at once. Shows
-the combined budget total across all categories above the list when any
-category has one set.
+quick-add from Home, to keep that form from doing two jobs at once.
+
+A "Total" card sits first in the list, same layout as a category card
+(spend-this-period total colored against the summed budget, progress bar)
+but built by hand rather than from a real category: no action icons (there's
+nothing to rename, delete, or add a spend to), and the monthly budget row
+shows the summed budget as plain text, not an editable input — you edit
+each category's own budget, never a derived total.
 
 The "+" icon (`openAddCategorySpendDialog`) adds a spend straight to that
 card's category — a small dialog naming the category asks only for an
