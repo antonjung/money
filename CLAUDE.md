@@ -8,20 +8,14 @@ Self-contained, no backend — data lives in localStorage on the device.
 
 The header is `position: sticky` so it stays visible while a screen's
 content scrolls beneath it (History, Categories, and Summary can all get
-long). The masthead itself *is* the current period indicator now — the
-`<h1>` shows the current period's name and its total on one line, same size
-and weight throughout (two `<span>`s, no separate smaller style for the
-total), replacing the static "Money" wordmark entirely, on every screen. No
-current period reads as just "No current period" with no total. This used
-to be shown separately in per-screen banners on Home and List (and not at
-all on Summary, Categories, or Periods); those banners are gone now that the
-header covers it everywhere. Set by `renderHeaderPeriod`, which every
-`renderMoneyViews()` call re-runs regardless of which tab is active.
+long). It's just the static "Money" wordmark plus the share icon — an
+earlier iteration turned it into a live current-period-plus-total display,
+but that was reverted; period context now lives in each screen's own picker
+instead (see Home, List, Summary below).
 
-The version string moved out of the header entirely and lives at the bottom
-of the bottom nav instead (`.bottom-nav` is now a column: the row of tab
-buttons, then a centered version caption beneath) — the header masthead is
-just the period now, not app chrome.
+The version string lives at the bottom of the bottom nav (`.bottom-nav` is a
+column: the row of tab buttons, then a centered version caption beneath),
+not in the header.
 
 ## Data
 
@@ -65,7 +59,11 @@ each category's card (see below).
 A "Period" picker (`homeMonthPicker`, same dropdown-trigger pattern as
 everywhere else) sets which period this screen is viewing — defaults to the
 current period but can be switched to any other, independently of what's
-actually current. Every card on the page (totals, the "+" add-spend icon)
+actually current. It resets back to current every time you navigate to the
+Home tab (`switchToView` forces `homeMonthId = currentMonth()?.id` on entry)
+— so switching away and back always lands you back on the current period
+rather than wherever you last left it; List and Summary's own pickers do the
+same on their tabs. Every card on the page (totals, the "+" add-spend icon)
 reflects whichever period is picked here, and adding a spend writes into
 *that* period, not necessarily `currentMonthId` — e.g. you can switch to a
 past period on Home and log a spend directly into it. The picker still shows
@@ -118,8 +116,9 @@ create a category, there's no quick-add elsewhere.
 
 ### List (history view)
 Its own "Period" picker (`historyMonthPicker`, same pattern as Home/Summary,
-defaults to current) sets which period's spends are shown — independent of
-Home's picker and of `currentMonthId`. A "Filter by category" dropdown (same
+defaults to current and resets to current every time you navigate to this
+tab) sets which period's spends are shown — independent of Home's picker
+and of `currentMonthId`. A "Filter by category" dropdown (same
 expandable-list pattern, with an "All categories" option) narrows the list
 further. The viewed period's recorded spends: date is editable inline,
 pencil icon opens Edit spend (category + amount, via
@@ -140,7 +139,8 @@ category change.
 
 ### Summary (report view)
 Empty state if there are no periods at all (`data.months.length === 0`) —
-otherwise, choose a period (default: current). A compact CSS-grid table
+otherwise, choose a period (default: current; also resets to current every
+time you navigate to this tab, like Home and List). A compact CSS-grid table
 (`.breakdown-header` + one `.breakdown-item` `<li>` per category, union of
 both periods' categories, sorted by main-period spend): category name,
 current-period amount, compare-period amount, budget, all on one row. Grid

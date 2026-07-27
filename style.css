@@ -58,7 +58,6 @@ h1 {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--accent);
-  font-variant-numeric: tabular-nums;
 }
 
 .icon-btn {

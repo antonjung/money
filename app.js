@@ -1,4 +1,4 @@
-const APP_VERSION = 'v3.1';
+const APP_VERSION = 'v3.2';
 
 // ── Sound ─────────────────────────────────────────────────────────────────────
 
@@ -522,9 +522,6 @@ const historyView = document.getElementById('historyView');
 const reportView = document.getElementById('reportView');
 const periodsView = document.getElementById('periodsView');
 
-const headerPeriodLabel = document.getElementById('headerPeriodLabel');
-const headerPeriodTotal = document.getElementById('headerPeriodTotal');
-
 const homeMonthTrigger = document.getElementById('homeMonthTrigger');
 const homeMonthTriggerLabel = document.getElementById('homeMonthTriggerLabel');
 const homeMonthDropdown = document.getElementById('homeMonthDropdown');
@@ -636,15 +633,30 @@ confirmOkBtn.addEventListener('click', () => {
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
+// Home, List, and Summary each default their own period picker to the
+// current period on load — but since the pickers only re-resolve an
+// *invalid* selection, simply revisiting a tab wouldn't otherwise snap
+// back to current after you'd viewed something else there. So every time
+// you navigate to one of these tabs, its picker is explicitly reset to
+// whatever's current right now.
 function switchToView(view) {
   tabs.forEach(t => t.classList.toggle('active', t.dataset.view === view));
   spendView.classList.toggle('hidden', view !== 'spend');
   historyView.classList.toggle('hidden', view !== 'history');
   reportView.classList.toggle('hidden', view !== 'report');
   periodsView.classList.toggle('hidden', view !== 'periods');
-  if (view === 'spend') renderCategoriesView();
-  if (view === 'history') renderHistoryView();
-  if (view === 'report') renderReport();
+  if (view === 'spend') {
+    homeMonthId = currentMonth()?.id ?? null;
+    renderCategoriesView();
+  }
+  if (view === 'history') {
+    historyMonthId = currentMonth()?.id ?? null;
+    renderHistoryView();
+  }
+  if (view === 'report') {
+    selectedMonthId = currentMonth()?.id ?? null;
+    renderReport();
+  }
   if (view === 'periods') renderPeriodsView();
 }
 
@@ -653,12 +665,6 @@ tabs.forEach(tab => {
 });
 
 reportGoToPeriodsBtn.addEventListener('click', () => switchToView('periods'));
-
-function renderHeaderPeriod() {
-  const month = currentMonth();
-  headerPeriodLabel.textContent = month ? month.label : 'No current period';
-  headerPeriodTotal.textContent = month ? money(monthTotal(month)) : '';
-}
 
 // ── Period pickers (Home, List) ──────────────────────────────────────────────
 // Both Home and List let you view (and, for Home, add spends into) any
@@ -965,7 +971,6 @@ editSpendConfirmBtn.addEventListener('click', () => {
 });
 
 function renderMoneyViews() {
-  renderHeaderPeriod();
   if (!spendView.classList.contains('hidden')) renderCategoriesView();
   renderHistoryView();
   if (!reportView.classList.contains('hidden')) renderReport();
