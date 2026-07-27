@@ -8,7 +8,12 @@ Self-contained, no backend — data lives in localStorage on the device.
 
 The header (title + version) is `position: sticky` so it stays visible while
 a screen's content scrolls beneath it (History, Categories, and Summary can
-all get long).
+all get long). It also shows the current period's name (or "No current
+period") right under the title, on every screen — the one thing `Home` and
+`List` already surfaced in their own banners, but Summary, Categories, and
+Periods previously gave no indication of at all. Set by
+`renderCurrentMonthBanner`, which every `renderMoneyViews()` call re-runs
+regardless of which tab is active.
 
 ## Data
 
@@ -127,13 +132,28 @@ independent concept (see Periods below). You can view July's report while
 August is current for spend entry.
 
 ### Categories
-Add a category (name + optional monthly budget together, one step) and edit
-any category's budget inline — the total re-renders on every budget change
+Add a category (name + optional monthly budget together, one step). Each
+category renders as its own large card (`.category-card`), not a compact
+row: name and action icons on top, then the current period's spend total in
+large type — colored against that category's budget via the same
+`budgetColorClass` Summary uses (green at/under, amber to 10% over, red
+beyond; no color when no budget is set) — a thin progress bar beneath it
+(only shown once a budget is set), and the monthly budget input on its own
+row at the bottom. Editing the budget re-renders the whole view
 (`renderCategoriesView` re-runs after `setCategoryBudget`, not just once on
-open), so it can't go stale while you're editing. This is the only way to
-create a category — there's no quick-add from Home, to keep that form from
-doing two jobs at once. Shows the combined budget total across all
-categories above the list when any category has one set.
+open), so the total's color and the progress bar can't go stale while you're
+editing. Adding a category here is the only way to create one — there's no
+quick-add from Home, to keep that form from doing two jobs at once. Shows
+the combined budget total across all categories above the list when any
+category has one set.
+
+The "+" icon (`openAddCategorySpendDialog`) adds a spend straight to that
+card's category — a small dialog naming the category asks only for an
+amount, then calls the same `addSpend`/chime/toast path Home uses. It's a
+shortcut for "one more spend in a category I'm already looking at", not a
+replacement for Home's picker-driven flow. Hidden when there's no current
+period, since a spend always lands in `currentMonth()` and there's nowhere
+for it to go otherwise.
 
 Pencil icon opens a rename dialog (`renameCategory`) — just updates
 `cat.name`. Spends reference categories by id, not by a copied name string,

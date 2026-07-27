@@ -1,4 +1,4 @@
-const APP_VERSION = 'v2.7';
+const APP_VERSION = 'v2.8';
 
 // ── Sound ─────────────────────────────────────────────────────────────────────
 
@@ -513,6 +513,7 @@ async function joinGroupFromUrl() {
 const BIN_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
 const PENCIL_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
 const CHECK_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg>';
+const PLUS_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
 
 const tabs = document.querySelectorAll('.nav-tab');
 const spendView = document.getElementById('spendView');
@@ -523,6 +524,7 @@ const periodsView = document.getElementById('periodsView');
 
 const currentMonthLabel = document.getElementById('currentMonthLabel');
 const currentMonthTotal = document.getElementById('currentMonthTotal');
+const headerPeriod = document.getElementById('headerPeriod');
 const noPeriodMsg = document.getElementById('noPeriodMsg');
 const goToPeriodsBtn = document.getElementById('goToPeriodsBtn');
 const noCategoriesMsg = document.getElementById('noCategoriesMsg');
@@ -588,6 +590,12 @@ const renameCategoryDialog = document.getElementById('renameCategoryDialog');
 const renameCategoryInput = document.getElementById('renameCategoryInput');
 const renameCategoryCancelBtn = document.getElementById('renameCategoryCancelBtn');
 const renameCategoryConfirmBtn = document.getElementById('renameCategoryConfirmBtn');
+
+const addCategorySpendDialog = document.getElementById('addCategorySpendDialog');
+const addCategorySpendLabel = document.getElementById('addCategorySpendLabel');
+const addCategorySpendAmountInput = document.getElementById('addCategorySpendAmountInput');
+const addCategorySpendCancelBtn = document.getElementById('addCategorySpendCancelBtn');
+const addCategorySpendConfirmBtn = document.getElementById('addCategorySpendConfirmBtn');
 
 const periodList = document.getElementById('periodList');
 const addPeriodBtn = document.getElementById('addPeriodBtn');
@@ -715,6 +723,7 @@ function renderCurrentMonthBanner() {
   const month = currentMonth();
   currentMonthLabel.textContent = month ? month.label : '';
   currentMonthTotal.textContent = month ? money(monthTotal(month)) : '';
+  headerPeriod.textContent = month ? month.label : 'No current period';
 }
 
 let historyFilterCategoryId = null; // null = all categories
@@ -1011,6 +1020,7 @@ function renderCategoriesView() {
       <div class="category-card-top">
         <span class="category-name">${escapeHtml(cat.name)}</span>
         <div class="category-row-actions">
+          ${month ? `<button type="button" class="icon-btn-square add-category-spend-btn" aria-label="Add spend">${PLUS_ICON_SVG}</button>` : ''}
           <button type="button" class="icon-btn-square rename-category-btn" aria-label="Rename category">${PENCIL_ICON_SVG}</button>
           ${canDelete ? `<button type="button" class="icon-btn-square danger delete-category-btn" aria-label="Delete category">${BIN_ICON_SVG}</button>` : ''}
         </div>
@@ -1028,6 +1038,8 @@ function renderCategoriesView() {
       setCategoryBudget(cat.id, !val || val < 0 ? 0 : val);
       renderCategoriesView();
     });
+    const addSpendBtn = li.querySelector('.add-category-spend-btn');
+    if (addSpendBtn) addSpendBtn.addEventListener('click', () => openAddCategorySpendDialog(cat.id));
     li.querySelector('.rename-category-btn').addEventListener('click', () => openRenameCategoryDialog(cat.id));
     const deleteCategoryBtn = li.querySelector('.delete-category-btn');
     if (deleteCategoryBtn) {
@@ -1061,6 +1073,32 @@ renameCategoryConfirmBtn.addEventListener('click', () => {
   renameCategory(pendingRenameCategoryId, renameCategoryInput.value);
   renameCategoryDialog.close();
   renderAll();
+});
+
+let pendingAddCategorySpendId = null;
+
+function openAddCategorySpendDialog(categoryId) {
+  const cat = findCategory(categoryId);
+  if (!cat) return;
+  pendingAddCategorySpendId = categoryId;
+  addCategorySpendLabel.textContent = cat.name;
+  addCategorySpendAmountInput.value = '';
+  addCategorySpendDialog.showModal();
+  addCategorySpendAmountInput.focus();
+}
+
+addCategorySpendCancelBtn.addEventListener('click', () => addCategorySpendDialog.close());
+
+addCategorySpendConfirmBtn.addEventListener('click', () => {
+  if (!pendingAddCategorySpendId) return;
+  const amount = parseFloat(addCategorySpendAmountInput.value);
+  if (!amount || amount <= 0) { addCategorySpendAmountInput.focus(); return; }
+  const cat = findCategory(pendingAddCategorySpendId);
+  addSpend(pendingAddCategorySpendId, amount);
+  addCategorySpendDialog.close();
+  playAddedSound();
+  showToast(`${money(amount)} added to ${cat ? cat.name : 'category'}`);
+  renderMoneyViews();
 });
 
 function openAddCategoryDialog() {

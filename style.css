@@ -60,6 +60,13 @@ h1 {
   color: var(--accent);
 }
 
+.header-period {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
 .icon-btn {
   background: none;
   border: none;

@@ -17,7 +17,10 @@
   <div id="app">
     <header>
       <div class="header-row">
-        <h1>Money</h1>
+        <div>
+          <h1>Money</h1>
+          <div id="headerPeriod" class="header-period"></div>
+        </div>
         <button id="shareBtn" class="icon-btn" aria-label="Sharing">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
         </button>
@@ -281,6 +284,24 @@
       <div class="dialog-actions">
         <button id="addCategoryCancelBtn" class="btn btn-ghost">Cancel</button>
         <button id="addCategoryConfirmBtn" class="btn btn-primary">Add category</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="addCategorySpendDialog">
+    <div class="dialog-content">
+      <h2>Add spend</h2>
+      <p id="addCategorySpendLabel" class="muted"></p>
+      <div class="field">
+        <label for="addCategorySpendAmountInput">Amount</label>
+        <div class="input-row">
+          <span class="unit">£</span>
+          <input id="addCategorySpendAmountInput" type="number" step="0.01" min="0.01" inputmode="decimal">
+        </div>
+      </div>
+      <div class="dialog-actions">
+        <button id="addCategorySpendCancelBtn" class="btn btn-ghost">Cancel</button>
+        <button id="addCategorySpendConfirmBtn" class="btn btn-primary">Add spend</button>
       </div>
     </div>
   </dialog>
