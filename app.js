@@ -1,4 +1,4 @@
-const APP_VERSION = 'v3.4';
+const APP_VERSION = 'v3.5';
 
 // ── Sound ─────────────────────────────────────────────────────────────────────
 
@@ -1475,13 +1475,23 @@ leaveGroupBtn.addEventListener('click', () => {
 // ── Service worker / update banner ────────────────────────────────────────────
 
 const updateBanner = document.getElementById('updateBanner');
+const updateBannerText = document.getElementById('updateBannerText');
 const reloadBtn = document.getElementById('reloadBtn');
-const dismissUpdateBtn = document.getElementById('dismissUpdateBtn');
 
 let swRegistration = null;
 
+// Not dismissible — reading the new version off the waiting sw.js (a plain
+// no-store fetch of the file that's about to take over) so the banner can
+// say *which* version is available, not just that one exists.
 function showUpdateBanner() {
   updateBanner.classList.remove('hidden');
+  fetch('sw.js', { cache: 'no-store' })
+    .then(r => r.text())
+    .then(text => {
+      const match = text.match(/CACHE\s*=\s*'money-([^']+)'/);
+      if (match) updateBannerText.textContent = `New version available (${match[1]})`;
+    })
+    .catch(() => {});
 }
 
 if ('serviceWorker' in navigator) {
@@ -1516,8 +1526,6 @@ reloadBtn.addEventListener('click', () => {
     window.location.reload();
   }
 });
-
-dismissUpdateBtn.addEventListener('click', () => updateBanner.classList.add('hidden'));
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
 

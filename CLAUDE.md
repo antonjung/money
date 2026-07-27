@@ -275,8 +275,16 @@ exactly that case.
 
 `APP_VERSION` in `app.js` and `CACHE` in `sw.js` are bumped together on every
 deploy. Bumping `CACHE` is what makes the browser notice `sw.js` changed,
-which triggers the "new version available" banner (see `sw.js` comments) —
-the banner offers a reload rather than forcing one.
+which triggers the "new version available" banner (see `sw.js` comments).
+The banner sits at the top of the screen (not the bottom, alongside the
+toast), has no dismiss button — reloading is the only way to clear it, since
+leaving it up is the whole point — and names the version you'd be reloading
+into, e.g. "New version available (v3.4)": `showUpdateBanner` does a
+no-store `fetch('sw.js')` and regexes the `CACHE` string out of the text,
+since the page's own `APP_VERSION` is the *old* version, not the one
+waiting to take over. Reload (`#reloadBtn`, purple to stand out as the one
+thing to do with this banner) posts `SKIP_WAITING` to the waiting worker if
+there is one, else just reloads.
 
 Every version bump also gets an annotated git tag (`vX.Y`, matching
 `APP_VERSION`) pushed alongside the commit, and the latest one gets a GitHub
