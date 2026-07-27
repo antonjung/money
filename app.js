@@ -1,4 +1,4 @@
-const APP_VERSION = 'v2.6';
+const APP_VERSION = 'v2.7';
 
 // ── Sound ─────────────────────────────────────────────────────────────────────
 
@@ -998,15 +998,29 @@ function renderCategoriesView() {
     categoryList.innerHTML = '<li class="empty-msg">No categories yet.</li>';
     return;
   }
+  const month = currentMonth();
+  const spent = month ? categoryTotals(month) : new Map();
   for (const cat of sorted) {
     const canDelete = !categoryInUse(cat.id);
+    const catSpent = spent.get(cat.id) || 0;
+    const colorClass = budgetColorClass(catSpent, cat.budget);
+    const pct = cat.budget > 0 ? Math.min(100, (catSpent / cat.budget) * 100) : 0;
     const li = document.createElement('li');
+    li.className = 'category-card';
     li.innerHTML = `
-      <span class="category-name">${escapeHtml(cat.name)}</span>
-      <div class="category-row-actions">
+      <div class="category-card-top">
+        <span class="category-name">${escapeHtml(cat.name)}</span>
+        <div class="category-row-actions">
+          <button type="button" class="icon-btn-square rename-category-btn" aria-label="Rename category">${PENCIL_ICON_SVG}</button>
+          ${canDelete ? `<button type="button" class="icon-btn-square danger delete-category-btn" aria-label="Delete category">${BIN_ICON_SVG}</button>` : ''}
+        </div>
+      </div>
+      <div class="category-card-total ${colorClass}">${money(catSpent)}</div>
+      <div class="category-card-sub">spent this period</div>
+      ${cat.budget > 0 ? `<div class="category-progress"><div class="category-progress-bar ${colorClass}" style="width:${pct}%"></div></div>` : ''}
+      <div class="category-card-budget-row">
+        <span class="muted small">Monthly budget</span>
         <input type="number" class="category-budget-input" min="0" step="0.01" inputmode="decimal" placeholder="No budget" value="${cat.budget ? cat.budget : ''}">
-        <button type="button" class="icon-btn-square rename-category-btn" aria-label="Rename category">${PENCIL_ICON_SVG}</button>
-        ${canDelete ? `<button type="button" class="icon-btn-square danger delete-category-btn" aria-label="Delete category">${BIN_ICON_SVG}</button>` : ''}
       </div>
     `;
     li.querySelector('.category-budget-input').addEventListener('change', e => {
