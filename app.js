@@ -1,4 +1,4 @@
-const APP_VERSION = 'v3.0';
+const APP_VERSION = 'v3.1';
 
 // ── Sound ─────────────────────────────────────────────────────────────────────
 
@@ -6,7 +6,8 @@ let audioCtx = null;
 
 // Soft two-note chime (C5 then E5) confirming a spend was added — gentle
 // attack/decay rather than a sharp arcade-blip sweep. Created lazily inside
-// a user-gesture handler (the form submit) to satisfy autoplay policies.
+// a user-gesture handler (the add-spend dialog's confirm button) to satisfy
+// autoplay policies.
 function playAddedSound() {
   try {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -124,8 +125,8 @@ function deleteCategory(categoryId) {
 
 // ── Spends ────────────────────────────────────────────────────────────────────
 
-function addSpend(categoryId, amount) {
-  const month = currentMonth();
+function addSpend(monthId, categoryId, amount) {
+  const month = data.months.find(m => m.id === monthId);
   if (!month) return;
   month.spends.push({ id: uid(), categoryId, amount, note: '', at: todayISODate() });
   saveData();
@@ -519,21 +520,18 @@ const tabs = document.querySelectorAll('.nav-tab');
 const spendView = document.getElementById('spendView');
 const historyView = document.getElementById('historyView');
 const reportView = document.getElementById('reportView');
-const categoriesView = document.getElementById('categoriesView');
 const periodsView = document.getElementById('periodsView');
 
 const headerPeriodLabel = document.getElementById('headerPeriodLabel');
 const headerPeriodTotal = document.getElementById('headerPeriodTotal');
-const noPeriodMsg = document.getElementById('noPeriodMsg');
-const goToPeriodsBtn = document.getElementById('goToPeriodsBtn');
-const noCategoriesMsg = document.getElementById('noCategoriesMsg');
-const emptyAddCategoryBtn = document.getElementById('emptyAddCategoryBtn');
-const spendForm = document.getElementById('spendForm');
-const categoryTrigger = document.getElementById('categoryTrigger');
-const categoryTriggerLabel = document.getElementById('categoryTriggerLabel');
-const categoryDropdown = document.getElementById('categoryDropdown');
-const amountInput = document.getElementById('amountInput');
 
+const homeMonthTrigger = document.getElementById('homeMonthTrigger');
+const homeMonthTriggerLabel = document.getElementById('homeMonthTriggerLabel');
+const homeMonthDropdown = document.getElementById('homeMonthDropdown');
+
+const historyMonthTrigger = document.getElementById('historyMonthTrigger');
+const historyMonthTriggerLabel = document.getElementById('historyMonthTriggerLabel');
+const historyMonthDropdown = document.getElementById('historyMonthDropdown');
 const historyFilterTrigger = document.getElementById('historyFilterTrigger');
 const historyFilterTriggerLabel = document.getElementById('historyFilterTriggerLabel');
 const historyFilterDropdown = document.getElementById('historyFilterDropdown');
@@ -581,11 +579,6 @@ const newCategoryNameInput = document.getElementById('newCategoryNameInput');
 const newCategoryBudgetInput = document.getElementById('newCategoryBudgetInput');
 const addCategoryCancelBtn = document.getElementById('addCategoryCancelBtn');
 const addCategoryConfirmBtn = document.getElementById('addCategoryConfirmBtn');
-
-const renameCategoryDialog = document.getElementById('renameCategoryDialog');
-const renameCategoryInput = document.getElementById('renameCategoryInput');
-const renameCategoryCancelBtn = document.getElementById('renameCategoryCancelBtn');
-const renameCategoryConfirmBtn = document.getElementById('renameCategoryConfirmBtn');
 
 const addCategorySpendDialog = document.getElementById('addCategorySpendDialog');
 const addCategorySpendLabel = document.getElementById('addCategorySpendLabel');
@@ -648,11 +641,10 @@ function switchToView(view) {
   spendView.classList.toggle('hidden', view !== 'spend');
   historyView.classList.toggle('hidden', view !== 'history');
   reportView.classList.toggle('hidden', view !== 'report');
-  categoriesView.classList.toggle('hidden', view !== 'categories');
   periodsView.classList.toggle('hidden', view !== 'periods');
+  if (view === 'spend') renderCategoriesView();
   if (view === 'history') renderHistoryView();
   if (view === 'report') renderReport();
-  if (view === 'categories') renderCategoriesView();
   if (view === 'periods') renderPeriodsView();
 }
 
@@ -660,66 +652,84 @@ tabs.forEach(tab => {
   tab.addEventListener('click', () => switchToView(tab.dataset.view));
 });
 
-goToPeriodsBtn.addEventListener('click', () => switchToView('periods'));
 reportGoToPeriodsBtn.addEventListener('click', () => switchToView('periods'));
-
-// ── Spend view ────────────────────────────────────────────────────────────────
-
-let selectedCategoryId = null;
-
-function closeCategoryDropdown() {
-  categoryDropdown.classList.add('hidden');
-  categoryTrigger.classList.remove('open');
-}
-
-function toggleCategoryDropdown() {
-  const isOpen = !categoryDropdown.classList.contains('hidden');
-  if (isOpen) closeCategoryDropdown();
-  else {
-    categoryDropdown.classList.remove('hidden');
-    categoryTrigger.classList.add('open');
-  }
-}
-
-categoryTrigger.addEventListener('click', toggleCategoryDropdown);
-
-function selectCategory(catId) {
-  selectedCategoryId = catId;
-  closeCategoryDropdown();
-  renderCategorySelect();
-}
-
-function renderCategorySelect() {
-  const sorted = [...data.categories].sort((a, b) => a.name.localeCompare(b.name));
-  if (!sorted.some(c => c.id === selectedCategoryId)) {
-    selectedCategoryId = sorted.length ? sorted[0].id : null;
-  }
-  categoryTriggerLabel.textContent = selectedCategoryId ? findCategory(selectedCategoryId).name : 'Select category';
-
-  categoryDropdown.innerHTML = '';
-  for (const cat of sorted) {
-    const item = document.createElement('button');
-    item.type = 'button';
-    item.className = 'dropdown-item' + (cat.id === selectedCategoryId ? ' selected' : '');
-    item.textContent = cat.name;
-    item.addEventListener('click', () => selectCategory(cat.id));
-    categoryDropdown.appendChild(item);
-  }
-
-  // A missing period is the more fundamental blocker — if there's no current
-  // period, that message takes priority over the categories one.
-  const hasPeriod = !!currentMonth();
-  const hasCategories = sorted.length > 0;
-  noPeriodMsg.classList.toggle('hidden', hasPeriod);
-  noCategoriesMsg.classList.toggle('hidden', !hasPeriod || hasCategories);
-  spendForm.classList.toggle('hidden', !hasPeriod || !hasCategories);
-}
 
 function renderHeaderPeriod() {
   const month = currentMonth();
   headerPeriodLabel.textContent = month ? month.label : 'No current period';
   headerPeriodTotal.textContent = month ? money(monthTotal(month)) : '';
 }
+
+// ── Period pickers (Home, List) ──────────────────────────────────────────────
+// Both Home and List let you view (and, for Home, add spends into) any
+// period, not just the current one — same dropdown-trigger pattern Summary's
+// period picker uses, defaulting to the current period until the user picks
+// something else.
+
+function createPeriodPicker({ trigger, dropdown, label, getSelected, setSelected, onChange }) {
+  function close() {
+    dropdown.classList.add('hidden');
+    trigger.classList.remove('open');
+  }
+  function toggle() {
+    const isOpen = !dropdown.classList.contains('hidden');
+    if (isOpen) close();
+    else {
+      dropdown.classList.remove('hidden');
+      trigger.classList.add('open');
+    }
+  }
+  trigger.addEventListener('click', toggle);
+
+  function render() {
+    const sorted = [...data.months].sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt));
+    let selected = getSelected();
+    if (!sorted.some(m => m.id === selected)) {
+      selected = currentMonth()?.id ?? sorted[0]?.id ?? null;
+      setSelected(selected);
+    }
+
+    dropdown.innerHTML = '';
+    label.textContent = sorted.length ? 'Select period' : 'No periods yet';
+    for (const m of sorted) {
+      const text = m.label + (m.id === data.currentMonthId ? ' (current)' : '');
+      if (m.id === selected) label.textContent = text;
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'dropdown-item' + (m.id === selected ? ' selected' : '');
+      item.textContent = text;
+      item.addEventListener('click', () => {
+        setSelected(m.id);
+        close();
+        onChange();
+      });
+      dropdown.appendChild(item);
+    }
+    return sorted;
+  }
+
+  return { render };
+}
+
+let homeMonthId = null;
+const homeMonthPicker = createPeriodPicker({
+  trigger: homeMonthTrigger,
+  dropdown: homeMonthDropdown,
+  label: homeMonthTriggerLabel,
+  getSelected: () => homeMonthId,
+  setSelected: id => { homeMonthId = id; },
+  onChange: renderCategoriesView,
+});
+
+let historyMonthId = null;
+const historyMonthPicker = createPeriodPicker({
+  trigger: historyMonthTrigger,
+  dropdown: historyMonthDropdown,
+  label: historyMonthTriggerLabel,
+  getSelected: () => historyMonthId,
+  setSelected: id => { historyMonthId = id; },
+  onChange: renderHistoryView,
+});
 
 let historyFilterCategoryId = null; // null = all categories
 
@@ -770,10 +780,11 @@ function renderHistoryFilterDropdown() {
 }
 
 function renderHistoryView() {
-  const month = currentMonth();
+  historyMonthPicker.render();
+  const month = data.months.find(m => m.id === historyMonthId) || null;
   if (!month) {
     reassignCategoryBtn.classList.add('hidden');
-    spendList.innerHTML = '<li class="empty-msg">No current period. Set one from the Periods tab.</li>';
+    spendList.innerHTML = '<li class="empty-msg">No periods yet. Add one from the Periods tab.</li>';
     return;
   }
 
@@ -868,7 +879,7 @@ function renderReassignCategoryDropdown() {
 }
 
 reassignCategoryBtn.addEventListener('click', () => {
-  const month = currentMonth();
+  const month = data.months.find(m => m.id === historyMonthId) || null;
   if (!month || !historyFilterCategoryId) return;
   const count = month.spends.filter(s => s.categoryId === historyFilterCategoryId).length;
   const fromCat = findCategory(historyFilterCategoryId);
@@ -882,7 +893,7 @@ reassignCategoryBtn.addEventListener('click', () => {
 reassignCategoryCancelBtn.addEventListener('click', () => reassignCategoryDialog.close());
 
 reassignCategoryConfirmBtn.addEventListener('click', () => {
-  const month = currentMonth();
+  const month = data.months.find(m => m.id === historyMonthId) || null;
   if (!month || !historyFilterCategoryId || !reassignSelectedCategoryId) return;
   reassignCategory(month.id, historyFilterCategoryId, reassignSelectedCategoryId);
   historyFilterCategoryId = reassignSelectedCategoryId; // follow the moved spends
@@ -955,9 +966,9 @@ editSpendConfirmBtn.addEventListener('click', () => {
 
 function renderMoneyViews() {
   renderHeaderPeriod();
+  if (!spendView.classList.contains('hidden')) renderCategoriesView();
   renderHistoryView();
   if (!reportView.classList.contains('hidden')) renderReport();
-  if (!categoriesView.classList.contains('hidden')) renderCategoriesView();
   if (!periodsView.classList.contains('hidden')) renderPeriodsView();
 }
 
@@ -967,26 +978,12 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-spendForm.addEventListener('submit', e => {
-  e.preventDefault();
-  if (!selectedCategoryId) return;
-
-  const amount = parseFloat(amountInput.value);
-  if (!amount || amount <= 0) { amountInput.focus(); return; }
-
-  addSpend(selectedCategoryId, amount);
-  playAddedSound();
-  const cat = findCategory(selectedCategoryId);
-  showToast(`${money(amount)} added to ${cat ? cat.name : 'category'}`);
-
-  amountInput.value = '';
-  amountInput.blur();
-  renderMoneyViews();
-});
-
-// ── Categories view ───────────────────────────────────────────────────────────
+// ── Categories view (also Home) ──────────────────────────────────────────────
 
 function renderCategoriesView() {
+  homeMonthPicker.render();
+  const month = data.months.find(m => m.id === homeMonthId) || null;
+
   categoryList.innerHTML = '';
   const sorted = [...data.categories].sort((a, b) => a.name.localeCompare(b.name));
 
@@ -994,7 +991,6 @@ function renderCategoriesView() {
     categoryList.innerHTML = '<li class="empty-msg">No categories yet.</li>';
     return;
   }
-  const month = currentMonth();
   const spent = month ? categoryTotals(month) : new Map();
 
   const totalBudget = sorted.reduce((sum, c) => sum + (c.budget || 0), 0);
@@ -1026,10 +1022,9 @@ function renderCategoriesView() {
     li.className = 'category-card';
     li.innerHTML = `
       <div class="category-card-top">
-        <span class="category-name">${escapeHtml(cat.name)}</span>
+        <span class="category-name" tabindex="0" role="button" aria-label="Edit category name">${escapeHtml(cat.name)}</span>
         <div class="category-row-actions">
           ${month ? `<button type="button" class="icon-btn-square add-category-spend-btn" aria-label="Add spend">${PLUS_ICON_SVG}</button>` : ''}
-          <button type="button" class="icon-btn-square rename-category-btn" aria-label="Rename category">${PENCIL_ICON_SVG}</button>
           ${canDelete ? `<button type="button" class="icon-btn-square danger delete-category-btn" aria-label="Delete category">${BIN_ICON_SVG}</button>` : ''}
         </div>
       </div>
@@ -1048,7 +1043,7 @@ function renderCategoriesView() {
     });
     const addSpendBtn = li.querySelector('.add-category-spend-btn');
     if (addSpendBtn) addSpendBtn.addEventListener('click', () => openAddCategorySpendDialog(cat.id));
-    li.querySelector('.rename-category-btn').addEventListener('click', () => openRenameCategoryDialog(cat.id));
+    makeCategoryNameEditable(li.querySelector('.category-name'), cat);
     const deleteCategoryBtn = li.querySelector('.delete-category-btn');
     if (deleteCategoryBtn) {
       deleteCategoryBtn.addEventListener('click', () => {
@@ -1063,25 +1058,33 @@ function renderCategoriesView() {
   }
 }
 
-let pendingRenameCategoryId = null;
-
-function openRenameCategoryDialog(categoryId) {
-  const cat = findCategory(categoryId);
-  if (!cat) return;
-  pendingRenameCategoryId = categoryId;
-  renameCategoryInput.value = cat.name;
-  renameCategoryDialog.showModal();
-  renameCategoryInput.focus();
+// Tap-to-edit: clicking a category's name swaps it for a text input in
+// place, saving on blur/Enter (Escape reverts) — replaces the old
+// pencil-icon rename dialog with a direct, in-card edit.
+function makeCategoryNameEditable(nameEl, cat) {
+  const startEditing = () => {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'category-name-input';
+    input.value = cat.name;
+    nameEl.replaceWith(input);
+    input.focus();
+    input.select();
+    input.addEventListener('blur', () => {
+      const newName = input.value.trim();
+      if (newName && newName !== cat.name) renameCategory(cat.id, newName);
+      renderCategoriesView();
+    });
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+      if (e.key === 'Escape') { e.preventDefault(); input.value = cat.name; input.blur(); }
+    });
+  };
+  nameEl.addEventListener('click', startEditing);
+  nameEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startEditing(); }
+  });
 }
-
-renameCategoryCancelBtn.addEventListener('click', () => renameCategoryDialog.close());
-
-renameCategoryConfirmBtn.addEventListener('click', () => {
-  if (!pendingRenameCategoryId) return;
-  renameCategory(pendingRenameCategoryId, renameCategoryInput.value);
-  renameCategoryDialog.close();
-  renderAll();
-});
 
 let pendingAddCategorySpendId = null;
 
@@ -1098,11 +1101,11 @@ function openAddCategorySpendDialog(categoryId) {
 addCategorySpendCancelBtn.addEventListener('click', () => addCategorySpendDialog.close());
 
 addCategorySpendConfirmBtn.addEventListener('click', () => {
-  if (!pendingAddCategorySpendId) return;
+  if (!pendingAddCategorySpendId || !homeMonthId) return;
   const amount = parseFloat(addCategorySpendAmountInput.value);
   if (!amount || amount <= 0) { addCategorySpendAmountInput.focus(); return; }
   const cat = findCategory(pendingAddCategorySpendId);
-  addSpend(pendingAddCategorySpendId, amount);
+  addSpend(homeMonthId, pendingAddCategorySpendId, amount);
   addCategorySpendDialog.close();
   playAddedSound();
   showToast(`${money(amount)} added to ${cat ? cat.name : 'category'}`);
@@ -1117,7 +1120,6 @@ function openAddCategoryDialog() {
 }
 
 addCategoryBtn.addEventListener('click', openAddCategoryDialog);
-emptyAddCategoryBtn.addEventListener('click', openAddCategoryDialog);
 
 addCategoryCancelBtn.addEventListener('click', () => addCategoryDialog.close());
 
@@ -1319,7 +1321,6 @@ function renderReport() {
 // ── Periods view ──────────────────────────────────────────────────────────────
 
 function renderAll() {
-  renderCategorySelect();
   renderMoneyViews();
 }
 
@@ -1485,7 +1486,6 @@ function showToast(message) {
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 document.getElementById('version').textContent = APP_VERSION;
-renderCategorySelect();
 renderMoneyViews();
 joinGroupFromUrl().then(joinedFromUrl => {
   if (!joinedFromUrl) initGroupFromStorage();

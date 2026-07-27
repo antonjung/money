@@ -39,12 +39,16 @@ empty for new spends (the field was removed from entry — kept in the schema
 only so any pre-existing notes still display in List). `months` is
 append-only (creation order), each with its own independent `startedAt`, but
 **creation order no longer implies "current"** — `currentMonthId` is the
-single source of truth for which period Home adds to, settable explicitly to
-any period from the Periods tab. A fresh install starts with `months: []`
-and `currentMonthId: null` — there is no auto-created default period, and
-zero periods is a perfectly normal ongoing state (e.g. after deleting the
-last one), not just a transient first-run one. Categories are global and
-shared across months, each with an optional monthly `budget` (0 = none set).
+single source of truth for which period is *current*: shown in the header,
+badged in Periods, and the default selection everywhere a period picker
+appears (Home, List, Summary). It's settable explicitly to any period from
+the Periods tab. It is a default, not a lock — Home and List each have their
+own period picker and can view (and, on Home, add a spend into) any period,
+not only the current one. A fresh install starts with `months: []` and
+`currentMonthId: null` — there is no auto-created default period, and zero
+periods is a perfectly normal ongoing state (e.g. after deleting the last
+one), not just a transient first-run one. Categories are global and shared
+across months, each with an optional monthly `budget` (0 = none set).
 
 `loadData()` migrates pre-`currentMonthId` saves: the old convention (the
 month with `endedAt === null`, or failing that the last one) becomes the new
@@ -52,43 +56,84 @@ month with `endedAt === null`, or failing that the last one) becomes the new
 
 ## Functions
 
-Bottom nav, five screens (icon + label, like the `rehearsal` app):
+Bottom nav, four screens (icon + label, like the `rehearsal` app). The "Home"
+tab is what used to be a separate Categories screen — the old picker+amount
+spend-entry form is gone entirely, replaced by adding spends straight from
+each category's card (see below).
 
-### Home (spend view)
-Entry-only — category, amount — nothing else, so it's as fast as possible for
-repeated use. Blurs the amount field after adding (closes the numeric
-keypad) rather than refocusing it, plays a soft two-note chime
-(`playAddedSound`, same lazy-AudioContext-in-a-user-gesture pattern as the
-`timeit` app), and shows a toast ("£X added to Category") that fades out
-after ~2.2s (`showToast` — a fixed `#toast` element toggling a `.show` class
-for the fade, positioned like `#updateBanner`). The category picker is an
-expandable list (trigger button + chevron that flips, tap a row to pick and
-it closes), the same pattern `rehearsal` uses for "Download from shared
-library" — not a native `<select>`; the period picker in Summary uses the
-identical pattern.
+### Home (formerly Categories)
+A "Period" picker (`homeMonthPicker`, same dropdown-trigger pattern as
+everywhere else) sets which period this screen is viewing — defaults to the
+current period but can be switched to any other, independently of what's
+actually current. Every card on the page (totals, the "+" add-spend icon)
+reflects whichever period is picked here, and adding a spend writes into
+*that* period, not necessarily `currentMonthId` — e.g. you can switch to a
+past period on Home and log a spend directly into it. The picker still shows
+"No periods yet" and every card just reads £0.00 spent when
+`data.months.length === 0`; category management (add, rename, delete,
+budget) works regardless — it never required a period to exist before this
+merge and still doesn't.
 
-Two empty states, checked in priority order since the missing-period one is
-more fundamental: no current period → prompt with a "Go to Periods" shortcut
-(`switchToView('periods')`); current period but no categories → prompt to
-add one (categories are managed on their own screen, not created inline
-here).
+Each category renders as its own large card (`.category-card`): name and
+action icons on top, then the viewed period's spend total in large type —
+colored against that category's budget via `budgetColorClass` (green
+at/under, amber up to 10% over, red beyond; no color when no budget is set)
+— a thin progress bar beneath it (only shown once a budget is set), and the
+monthly budget input on its own row at the bottom. Editing the budget
+re-renders the whole view (`renderCategoriesView` re-runs after
+`setCategoryBudget`, not just once on open), so the total's color and the
+progress bar can't go stale while you're editing.
+
+The category name is tap-to-edit in place (`makeCategoryNameEditable`) —
+clicking it swaps the name for a text input, saving on blur or Enter
+(Escape reverts without saving) and re-rendering; there's no separate
+rename dialog. Spends reference categories by id, not by a copied name
+string, so every spend everywhere picks up the new name automatically —
+nothing to cascade or migrate.
+
+The "+" icon (`openAddCategorySpendDialog`) adds a spend straight to that
+card's category — a small dialog naming the category asks only for an
+amount, then calls `addSpend(homeMonthId, categoryId, amount)` plus the same
+chime/toast Home's old form used. It's hidden when there's no period to add
+to (`data.months.length === 0`), since a spend always needs a month to
+belong to.
+
+A bin icon (`deleteCategory`, confirmed) only appears when `categoryInUse`
+is false — checked across *every* period, not just the one being viewed,
+since a category deleted while in use elsewhere would leave orphaned
+`categoryId` references. Reassign or edit away any spends still using it
+first (List's Edit spend or bulk Reassign) and the icon appears once none
+remain.
+
+A "Total" card sits first in the list, same layout as a category card
+(spend-this-period total colored against the summed budget, progress bar)
+but built by hand rather than from a real category: no action icons (there's
+nothing to rename, delete, or add a spend to), and the monthly budget row
+shows the summed budget as plain text, not an editable input — you edit each
+category's own budget, never a derived total.
+
+"+ Add category" (name + optional monthly budget together, one step) sits
+at the *bottom* of the list, below every card — this is the only way to
+create a category, there's no quick-add elsewhere.
 
 ### List (history view)
-A "Filter by category" dropdown (same expandable-list pattern, with an "All
-categories" option) narrows the list below it; the period total shown in the
-header always stays the whole period's total regardless of the filter, only
-the list itself is filtered. The current period's recorded spends: date is
-editable inline, pencil icon opens Edit spend (category + amount, via
+Its own "Period" picker (`historyMonthPicker`, same pattern as Home/Summary,
+defaults to current) sets which period's spends are shown — independent of
+Home's picker and of `currentMonthId`. A "Filter by category" dropdown (same
+expandable-list pattern, with an "All categories" option) narrows the list
+further. The viewed period's recorded spends: date is editable inline,
+pencil icon opens Edit spend (category + amount, via
 `openEditSpendDialog`/`updateSpend` — category picker is the same
 dropdown-trigger pattern, sourced live from `data.categories`), bin icon
-deletes (confirmed). Shows a "no current period" prompt if there isn't one.
+deletes (confirmed). Shows a "no periods yet" prompt if `data.months.length
+=== 0`.
 
 While filtered to one category, a "Reassign to category" button appears
 (hidden when showing "All categories", when the filtered category has no
-spends this period, or when there's no other category to move them to).
-Opens a dialog naming the count and source category, picks a target from a
-dropdown that excludes the source, and `reassignCategory` moves every
-matching spend in the *current period only* in one action — the filter then
+spends in the viewed period, or when there's no other category to move them
+to). Opens a dialog naming the count and source category, picks a target
+from a dropdown that excludes the source, and `reassignCategory` moves every
+matching spend *in the viewed period only* in one action — the filter then
 follows the moved spends to the target category, so the result is visible
 immediately. This is the bulk counterpart to Edit spend's one-at-a-time
 category change.
@@ -135,49 +180,9 @@ when the current choice becomes invalid (main period changed to match it, or
 it no longer exists) — switching the main period otherwise keeps an explicit
 comparison choice, including an explicit "None".
 
-This is purely a *viewing* picker — which period Home adds to is a separate,
-independent concept (see Periods below). You can view July's report while
-August is current for spend entry.
-
-### Categories
-Add a category (name + optional monthly budget together, one step). Each
-category renders as its own large card (`.category-card`), not a compact
-row: name and action icons on top, then the current period's spend total in
-large type — colored against that category's budget via the same
-`budgetColorClass` Summary uses (green at/under, amber to 10% over, red
-beyond; no color when no budget is set) — a thin progress bar beneath it
-(only shown once a budget is set), and the monthly budget input on its own
-row at the bottom. Editing the budget re-renders the whole view
-(`renderCategoriesView` re-runs after `setCategoryBudget`, not just once on
-open), so the total's color and the progress bar can't go stale while you're
-editing. Adding a category here is the only way to create one — there's no
-quick-add from Home, to keep that form from doing two jobs at once.
-
-A "Total" card sits first in the list, same layout as a category card
-(spend-this-period total colored against the summed budget, progress bar)
-but built by hand rather than from a real category: no action icons (there's
-nothing to rename, delete, or add a spend to), and the monthly budget row
-shows the summed budget as plain text, not an editable input — you edit
-each category's own budget, never a derived total.
-
-The "+" icon (`openAddCategorySpendDialog`) adds a spend straight to that
-card's category — a small dialog naming the category asks only for an
-amount, then calls the same `addSpend`/chime/toast path Home uses. It's a
-shortcut for "one more spend in a category I'm already looking at", not a
-replacement for Home's picker-driven flow. Hidden when there's no current
-period, since a spend always lands in `currentMonth()` and there's nowhere
-for it to go otherwise.
-
-Pencil icon opens a rename dialog (`renameCategory`) — just updates
-`cat.name`. Spends reference categories by id, not by a copied name string,
-so every spend everywhere picks up the new name automatically; there's
-nothing to cascade or migrate.
-
-A bin icon (`deleteCategory`, confirmed) only appears when `categoryInUse`
-is false — checked across *every* period, not just the current one, since a
-category deleted while in use elsewhere would leave orphaned `categoryId`
-references. Reassign or edit away any spends still using it first (List's
-Edit spend or bulk Reassign) and the icon appears once none remain.
+This is purely a *viewing* picker, entirely independent of Home's and
+List's own period pickers and of `currentMonthId` — three screens, three
+independent "which period" choices, all defaulting to current until changed.
 
 ### Periods
 All period management lives here, replacing what used to be split between a
@@ -193,9 +198,10 @@ stays tight even with three actions per row:
   it's the very first period ever, which becomes current automatically since
   otherwise there'd be no way to add a spend without an extra manual step.
 - **Make current** (check-circle icon, `setCurrentMonth`): shown on every
-  period except the current one. This is the only thing that changes what
-  Home adds to — entirely decoupled from creation order or which period
-  Summary happens to be viewing.
+  period except the current one. Changes `currentMonthId` — the default
+  period Home, List, and Summary's pickers all start on — entirely decoupled
+  from creation order or which period any of them happens to be viewing at
+  the time.
 - **Rename** (pencil icon) and **delete** (bin icon, confirmed) — reuse the
   same dialog/confirm patterns as everywhere else. Deleting the current
   period falls back `currentMonthId` to whatever period was created most

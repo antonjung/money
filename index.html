@@ -26,37 +26,29 @@
 
     <main>
       <section id="spendView" class="view">
-        <div id="noPeriodMsg" class="empty-state hidden">
-          <p class="muted">No current period.</p>
-          <button id="goToPeriodsBtn" class="btn btn-secondary" type="button">Go to Periods</button>
+        <div class="field">
+          <label>Period</label>
+          <button type="button" id="homeMonthTrigger" class="dropdown-trigger">
+            <span id="homeMonthTriggerLabel">Select period</span>
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div id="homeMonthDropdown" class="dropdown-list hidden"></div>
         </div>
 
-        <div id="noCategoriesMsg" class="empty-state hidden">
-          <p class="muted">No categories yet.</p>
-          <button id="emptyAddCategoryBtn" class="btn btn-secondary" type="button">+ Add category</button>
-        </div>
-
-        <form id="spendForm">
-          <div class="field">
-            <label>Category</label>
-            <button type="button" id="categoryTrigger" class="dropdown-trigger">
-              <span id="categoryTriggerLabel">Select category</span>
-              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-            </button>
-            <div id="categoryDropdown" class="dropdown-list hidden"></div>
-          </div>
-          <div class="field">
-            <label for="amountInput">Amount</label>
-            <div class="input-row">
-              <span class="unit">£</span>
-              <input id="amountInput" type="number" step="0.01" min="0.01" inputmode="decimal" placeholder="0.00">
-            </div>
-          </div>
-          <button type="submit" class="btn btn-primary">Add spend</button>
-        </form>
+        <ul id="categoryList" class="category-list"></ul>
+        <button id="addCategoryBtn" class="btn btn-primary" type="button">+ Add category</button>
       </section>
 
       <section id="historyView" class="view hidden">
+        <div class="field">
+          <label>Period</label>
+          <button type="button" id="historyMonthTrigger" class="dropdown-trigger">
+            <span id="historyMonthTriggerLabel">Select period</span>
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div id="historyMonthDropdown" class="dropdown-list hidden"></div>
+        </div>
+
         <div class="field">
           <label>Filter by category</label>
           <button type="button" id="historyFilterTrigger" class="dropdown-trigger">
@@ -114,11 +106,6 @@
         </div>
       </section>
 
-      <section id="categoriesView" class="view hidden">
-        <button id="addCategoryBtn" class="btn btn-primary" type="button">+ Add category</button>
-        <ul id="categoryList" class="category-list"></ul>
-      </section>
-
       <section id="periodsView" class="view hidden">
         <button id="addPeriodBtn" class="btn btn-primary" type="button">+ Add period</button>
         <ul id="periodList" class="period-list"></ul>
@@ -138,10 +125,6 @@
         <button class="nav-tab" data-view="report">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
           <span>Summary</span>
-        </button>
-        <button class="nav-tab" data-view="categories">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41L13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-          <span>Categories</span>
         </button>
         <button class="nav-tab" data-view="periods">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -179,20 +162,6 @@
       <div class="dialog-actions">
         <button id="renameMonthCancelBtn" class="btn btn-ghost">Cancel</button>
         <button id="renameMonthConfirmBtn" class="btn btn-primary">Save</button>
-      </div>
-    </div>
-  </dialog>
-
-  <dialog id="renameCategoryDialog">
-    <div class="dialog-content">
-      <h2>Rename category</h2>
-      <div class="field">
-        <label for="renameCategoryInput">Name</label>
-        <input id="renameCategoryInput" type="text">
-      </div>
-      <div class="dialog-actions">
-        <button id="renameCategoryCancelBtn" class="btn btn-ghost">Cancel</button>
-        <button id="renameCategoryConfirmBtn" class="btn btn-primary">Save</button>
       </div>
     </div>
   </dialog>
